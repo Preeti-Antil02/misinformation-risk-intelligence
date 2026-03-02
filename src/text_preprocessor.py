@@ -1,4 +1,17 @@
 import re
+# def clean_text(self, text):
+#         text = text.lower()
+#         text = re.sub(r"http\S+", "", text)  # remove URLs
+#         text = re.sub(r"<.*?>", "", text)  # remove HTML
+#         text = re.sub(r"[^a-zA-Z\s]", "", text)  # remove punctuation
+#         return text
+
+
+
+
+
+# below code is with nltl and spacy, now i am usinf tf-idf vectorizer which has its own preprocessing steps, so i am not using this class for now, but i am keeping it here for future reference if needed
+
 import nltk
 import spacy
 from nltk.corpus import stopwords
