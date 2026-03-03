@@ -1,53 +1,37 @@
 import re
-# def clean_text(self, text):
-#         text = text.lower()
-#         text = re.sub(r"http\S+", "", text)  # remove URLs
-#         text = re.sub(r"<.*?>", "", text)  # remove HTML
-#         text = re.sub(r"[^a-zA-Z\s]", "", text)  # remove punctuation
-#         return text
-
-
-
-
-
-# below code is with nltl and spacy, now i am usinf tf-idf vectorizer which has its own preprocessing steps, so i am not using this class for now, but i am keeping it here for future reference if needed
-
-import nltk
 import spacy
-from nltk.corpus import stopwords
-
-nltk.download("stopwords")
-
-stop_words = set(stopwords.words("english"))
 
 nlp = spacy.load("en_core_web_sm")
 
 
 class TextPreprocessor:
-    def __init__(self, use_lemmatization=False):
-        self.use_lemmatization = use_lemmatization
+    def __init__(self, remove_stopwords=False, lemmatize=False):
+        self.remove_stopwords = remove_stopwords
+        self.lemmatize = lemmatize
 
     def clean_text(self, text):
         text = text.lower()
-        text = re.sub(r"http\S+", "", text)  # remove URLs
-        text = re.sub(r"<.*?>", "", text)  # remove HTML
-        text = re.sub(r"[^a-zA-Z\s]", "", text)  # remove punctuation
+        text = re.sub(r"http\S+", "", text)        # Remove URLs
+        text = re.sub(r"<.*?>", "", text)         # Remove HTML
+        text = re.sub(r"[^a-zA-Z\s]", "", text)   # Remove punctuation
         return text
-
-    def tokenize(self, text):
-        tokens = text.split()
-        tokens = [word for word in tokens if word not in stop_words]
-        return tokens
-
-    def lemmatize(self, tokens):
-        doc = nlp(" ".join(tokens))
-        return [token.lemma_ for token in doc]
 
     def preprocess(self, text):
         text = self.clean_text(text)
-        tokens = self.tokenize(text)
 
-        if self.use_lemmatization:
-            tokens = self.lemmatize(tokens)
+        doc = nlp(text)
+
+        tokens = []
+        for token in doc:
+            if token.is_space:
+                continue
+
+            if self.remove_stopwords and token.is_stop:
+                continue
+
+            if self.lemmatize:
+                tokens.append(token.lemma_)
+            else:
+                tokens.append(token.text)
 
         return " ".join(tokens)
