@@ -9,15 +9,15 @@ class TextPreprocessor:
         self.remove_stopwords = remove_stopwords
         self.lemmatize = lemmatize
 
-    def clean_text(self, text):
+    def basic_clean(self, text):
         text = text.lower()
         text = re.sub(r"http\S+", "", text)        # Remove URLs
         text = re.sub(r"<.*?>", "", text)         # Remove HTML
         text = re.sub(r"[^a-zA-Z\s]", "", text)   # Remove punctuation
         return text
 
-    def preprocess(self, text):
-        text = self.clean_text(text)
+    def advanced_clean(self, text):
+        text = self.basic_clean(text)
 
         doc = nlp(text)
 
