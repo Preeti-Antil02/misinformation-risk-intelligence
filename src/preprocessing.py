@@ -2,7 +2,7 @@ import pandas as pd
 
 
 class DataCleaner:
-    def __init__(self, min_words=30):
+    def __init__(self, min_words=3):
         self.min_words = min_words
 
     def remove_duplicates(self, df):

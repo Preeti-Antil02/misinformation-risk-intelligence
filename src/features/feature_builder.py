@@ -3,12 +3,27 @@ import numpy as np
 import pandas as pd
 from textblob import TextBlob
 
+from src import features
+
 
 class FeatureBuilder:
 
     def __init__(self):
-        self.extreme_words = ["100%", "guaranteed", "shocking", "secret", "cure"]
-
+        self.extreme_words = [
+        "guaranteed", "shocking", "secret", "cure",
+        "bombshell", "exposed", "hoax", "conspiracy",
+        "urgent", "breaking", "unbelievable", "mainstream"
+        ] 
+        self.feature_names = [
+        "exclamation_count",
+        "capital_word_count",
+        "capital_ratio",
+        "extreme_keyword_count",
+        "sentiment_polarity",
+        "subjectivity",
+        "text_length",
+        "avg_word_length"
+        ]
     def exclamation_count(self, text):
         return text.count("!")
 
@@ -54,4 +69,4 @@ class FeatureBuilder:
         features["text_length"] = df["text"].apply(self.text_length)
         features["avg_word_length"] = df["text"].apply(self.avg_word_length)
 
-        return features
+        return features[self.feature_names]

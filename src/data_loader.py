@@ -18,20 +18,20 @@ class DataLoader:
             )
 
     def load_isot(self):
+
         fake_path = self.data_dir / "isot" / "fake.csv"
         true_path = self.data_dir / "isot" / "true.csv"
 
-        try:
-            fake_df = pd.read_csv(fake_path)
-            true_df = pd.read_csv(true_path)
-        except FileNotFoundError as e:
-            raise FileNotFoundError(
-                f"Dataset file not found. Check path: {e.filename}"
-            )
+        fake_df = pd.read_csv(fake_path)
+        true_df = pd.read_csv(true_path)
 
-        # Validate schema
-        self._validate_columns(fake_df, "ISOT Fake")
-        self._validate_columns(true_df, "ISOT True")
+        # Validate title column
+        if "title" not in fake_df.columns or "title" not in true_df.columns:
+            raise ValueError("ISOT dataset must contain a 'title' column")
+
+        # Use title instead of full article text
+        fake_df["text"] = fake_df["title"]
+        true_df["text"] = true_df["title"]
 
         fake_df["label"] = 1
         true_df["label"] = 0
@@ -40,7 +40,44 @@ class DataLoader:
         true_df["source_dataset"] = "isot"
 
         df = pd.concat([fake_df, true_df], ignore_index=True)
-        return df
+
+        return df[["text", "label", "source_dataset"]]
+    
+    
+    def load_domain_testing(self):
+
+        domain_path = self.data_dir / "Domain_testing_dataset"
+
+        if not domain_path.exists():
+            raise FileNotFoundError(f"Domain dataset not found: {domain_path}")
+
+        files = {
+            "gossipcop_fake.csv": 1,
+            "gossipcop_real.csv": 0,
+            "politifact_fake.csv": 1,
+            "politifact_real.csv": 0,
+        }
+
+        dfs = []
+
+        for file, label in files.items():
+
+            file_path = domain_path / file
+            df = pd.read_csv(file_path)
+
+            if "title" not in df.columns:
+                raise ValueError(f"{file} does not contain 'title' column")
+
+            df = df[["title"]].rename(columns={"title": "text"})
+            df["label"] = label
+            df["source_dataset"] = "fakenewsnet"
+
+            dfs.append(df)
+
+        domain_df = pd.concat(dfs, ignore_index=True)
+
+        return domain_df
+
 
     def unify_datasets(self):
         df = self.load_isot()
