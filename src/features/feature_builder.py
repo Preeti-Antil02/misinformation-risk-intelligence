@@ -21,7 +21,6 @@ class FeatureBuilder:
         "extreme_keyword_count",
         "sentiment_polarity",
         "subjectivity",
-        "text_length",
         "avg_word_length"
         ]
     def exclamation_count(self, text):
@@ -66,7 +65,6 @@ class FeatureBuilder:
         features["extreme_keyword_count"] = df["text"].apply(self.extreme_keyword_count)
         features["sentiment_polarity"] = df["text"].apply(self.sentiment_polarity)
         features["subjectivity"] = df["text"].apply(self.subjectivity)
-        features["text_length"] = df["text"].apply(self.text_length)
         features["avg_word_length"] = df["text"].apply(self.avg_word_length)
 
         return features[self.feature_names]

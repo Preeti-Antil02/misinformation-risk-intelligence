@@ -1,3 +1,4 @@
+from pydoc import text
 import re
 import spacy
 
@@ -35,3 +36,9 @@ class TextPreprocessor:
                 tokens.append(token.text)
 
         return " ".join(tokens)
+    
+    def truncate(self, text, max_words=150):
+        words = text.split()
+        if len(words) > max_words:
+            return " ".join(words[:max_words])
+        return text

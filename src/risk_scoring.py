@@ -24,3 +24,16 @@ class RiskScorer:
 
     def score_batch(self, probabilities):
         return [self.get_risk_level(p) for p in probabilities]
+    
+    def score(self, prob):
+        return self.get_risk_level(prob)
+    
+    def score_ensemble(self, prob):
+        if prob < 0.25:
+            return "Low"
+        elif prob < 0.50:
+            return "Moderate"
+        elif prob < 0.70:
+            return "High"
+        else:
+            return "Critical"
