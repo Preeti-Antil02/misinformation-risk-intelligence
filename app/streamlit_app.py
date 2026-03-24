@@ -31,7 +31,10 @@ st.set_page_config(
 # Path fix
 # -------------------------------------------------------
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import os
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(BASE_DIR)
 
 from src.features.text_preprocessor import TextPreprocessor
 from src.features.feature_builder import FeatureBuilder
