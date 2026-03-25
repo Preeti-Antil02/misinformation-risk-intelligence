@@ -8,6 +8,7 @@ env/
 
 # Data
 data/
+models/
 
 # Notebook checkpoints
 .ipynb_checkpoints/
