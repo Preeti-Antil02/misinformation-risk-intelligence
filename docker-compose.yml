@@ -5,7 +5,7 @@ services:
     build: .
     container_name: misinformation-risk-app
     ports:
-      - "8501:8501"
+      - "7860:7860"
     volumes:
       # Models stay on host machine — mounted read-only into container
       - ./models:/app/models:ro
