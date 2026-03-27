@@ -274,9 +274,9 @@ def predict(text, lr, xgb, tfidf, scaler, bert, explainer, tp, fb, rs):
     cleaned    = tp.truncate(cleaned)
     X_tfidf    = tfidf.transform([cleaned])
     temp_df    = pd.DataFrame({"text": [cleaned]})
-    X_num      = fb.build_features(temp_df).astype(np.float64)
-    X_num_s    = scaler.transform(X_num)
-    X_combined = hstack([X_tfidf, X_num_s])
+    X_num      = fb.build_features(temp_df)
+    X_num      = pd.DataFrame(X_num).apply(pd.to_numeric, errors='coerce').fillna(0)
+    X_num_s    = scaler.transform(X_num.values)
 
     lr_prob   = float(lr.predict_proba(X_tfidf)[0, 1])
     xgb_prob  = float(xgb.predict_proba(X_combined)[0, 1])
