@@ -270,19 +270,35 @@ def load_all_models():
 # Prediction
 # -------------------------------------------------------
 def predict(text, lr, xgb, tfidf, scaler, bert, explainer, tp, fb, rs):
-    cleaned    = tp.basic_clean(text)
-    cleaned    = tp.truncate(cleaned)
-    X_tfidf    = tfidf.transform([cleaned])
-    temp_df    = pd.DataFrame({"text": [cleaned]})
-    X_num      = fb.build_features(temp_df)
-    X_num      = pd.DataFrame(X_num).apply(pd.to_numeric, errors='coerce').fillna(0)
-    X_num_s    = scaler.transform(X_num.values)
+    cleaned = tp.basic_clean(text)
+    cleaned = tp.truncate(cleaned)
+
+    X_tfidf = tfidf.transform([cleaned])
+
+    temp_df = pd.DataFrame({"text": [cleaned]})
+    X_num_raw = fb.build_features(temp_df)
+
+    def safe_to_float(val):
+        if isinstance(val, (int, float, np.integer, np.floating)):
+            return float(val)
+        s = str(val).strip().strip("[]").split()[0]  
+        try:
+            return float(s)
+        except (ValueError, IndexError):
+            return 0.0
+
+    X_num = pd.DataFrame(X_num_raw)
+    X_num = X_num.applymap(safe_to_float).fillna(0.0)
+
+    X_num_s = scaler.transform(X_num.values)
+
+    from scipy.sparse import hstack, csr_matrix
+    X_combined = hstack([X_tfidf, csr_matrix(X_num_s)])
 
     lr_prob   = float(lr.predict_proba(X_tfidf)[0, 1])
     xgb_prob  = float(xgb.predict_proba(X_combined)[0, 1])
     bert_prob = float(bert.predict_proba([cleaned])[0])
 
-    # ── CHANGE 1: BERT outlier detection ──────────────────────────────────
     lr_and_xgb_avg = (lr_prob * 0.35 + xgb_prob * 0.40) / 0.75
 
     bert_outlier = (
@@ -299,7 +315,6 @@ def predict(text, lr, xgb, tfidf, scaler, bert, explainer, tp, fb, rs):
         ensemble_source = "weighted ensemble"
 
     ensemble_risk = rs.score_ensemble(ensemble_prob)
-    # ── END CHANGE 1 ──────────────────────────────────────────────────────
 
     shap_vals = explainer.shap_values(X_combined)
 
@@ -313,7 +328,6 @@ def predict(text, lr, xgb, tfidf, scaler, bert, explainer, tp, fb, rs):
         "X_combined":      X_combined,
         "cleaned_text":    cleaned,
     }
-
 # -------------------------------------------------------
 # SHAP helpers
 # -------------------------------------------------------
