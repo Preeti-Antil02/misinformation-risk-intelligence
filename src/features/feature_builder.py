@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import pandas as pd
+from streamlit import text
 from textblob import TextBlob
 
 from src import features
@@ -52,9 +53,9 @@ class FeatureBuilder:
     def avg_word_length(self, text):
         words = text.split()
         if len(words) == 0:
-            return 0
-        return np.mean([len(w) for w in words])
-
+            return 0.0
+        return float(sum(len(w) for w in words) / len(words)) 
+    
     def build_features(self, df):
 
         features = pd.DataFrame()

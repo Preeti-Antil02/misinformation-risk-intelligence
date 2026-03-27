@@ -115,7 +115,7 @@ def predict(request: PredictRequest):
     X_tfidf = tfidf.transform([cleaned])
 
     temp_df = pd.DataFrame({"text": [cleaned]})
-    X_num = fb.build_features(temp_df)
+    X_num = fb.build_features(temp_df).astype(np.float64)
     X_num_scaled = scaler.transform(X_num)
 
     X_combined = hstack([X_tfidf, X_num_scaled])
