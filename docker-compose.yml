@@ -1,0 +1,15 @@
+version: "3.9"
+ 
+services:
+  misinformation-app:
+    build: .
+    container_name: misinformation-risk-app
+    ports:
+      - "7860:7860"
+    volumes:
+      # Models stay on host machine — mounted read-only into container
+      - ./models:/app/models:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+ 
