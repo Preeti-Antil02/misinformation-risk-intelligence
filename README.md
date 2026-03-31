@@ -15,6 +15,9 @@ pinned: false
 RiskLens is an end-to-end NLP system designed to detect and quantify misinformation risk in news articles.
 Unlike traditional fake news classifiers, it provides risk scoring and explainability, enabling more informed decision-making.
 
+This is not just a classifier.
+It’s a decision-support system for misinformation risk assessment.
+
 🎯 Key Features
 🔍 Multi-model pipeline
 Combines Logistic Regression, XGBoost, and fine-tuned BERT for robust predictions

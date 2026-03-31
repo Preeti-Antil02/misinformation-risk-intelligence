@@ -232,37 +232,41 @@ POLITICAL_WORDS = [
 ]
 
 FAKE_EXAMPLES = [
-    "Ginger is 10,000x more effective at killing cancer than chemo, a new study finds. "
-    "Doctors are refusing to tell patients because it would destroy the pharmaceutical industry.",
+    # Short
+    "Scientists confirm drinking hot water every hour can completely cure cancer within days",
+    "Government secretly approves mind-control chips in COVID booster shots, leaked documents reveal",
+    "NASA discovers hidden city on Mars but refuses to release images to the public",
+    "New study proves smartphones can read your thoughts using hidden sensors",
+    "Eating only bananas for 3 days can detox your body and reverse aging, experts claim",
 
-    "mRNA vaccines are gene therapy. A government insider has revealed the DNA-altering "
-    "ingredients hidden in every dose. Share this before it gets deleted.",
+    # Long
+    "A viral report circulating on social media claims that a group of international scientists has discovered that drinking hot water every hour can eliminate cancer cells completely within 72 hours, a finding that pharmaceutical companies are allegedly trying to suppress to protect chemotherapy profits.",
 
-    "Video shows White House unveiling secret plan to train bald eagles for border "
-    "surveillance. Officials denied the program exists but footage proves otherwise.",
+    "According to an anonymous government insider, recent COVID booster vaccines contain nanochips designed to monitor and influence human behavior, with several leaked documents suggesting a global surveillance program is already underway.",
 
-    "Putin intercepts secret shipments of adrenochrome in Ukraine. The globalist network "
-    "has been exposed. This is what the mainstream media refuses to report.",
+    "Multiple online sources are claiming that NASA has found an ancient alien city buried beneath the surface of Mars, but the agency is deliberately withholding photographic evidence to avoid public panic and maintain control over extraterrestrial discoveries.",
 
-    "New pink salt diet drink burns fat overnight. A 72-year-old lost 20 lbs in 2 days. "
-    "Doctors hate this one weird trick that big pharma has been suppressing for decades.",
+    "A widely shared article suggests that modern smartphones are equipped with advanced sensors capable of interpreting brain signals, allowing companies to read users' thoughts and predict decisions without their consent.",
+
+    "Health influencers are promoting a new 'banana detox' diet, claiming that consuming only bananas for three consecutive days can flush toxins, repair internal organs, and significantly slow down the aging process, despite lack of scientific evidence."
 ]
 
 REAL_EXAMPLES = [
-    "Tiny gene mutations shape cancer behavior and immune response, according to a new "
-    "study published in Nature. Researchers say the findings could improve targeted therapy.",
+    # Short (Political-focused)
+    "Government passes new data protection bill to strengthen user privacy laws",
+    "Election Commission announces revised guidelines ahead of upcoming general elections",
+    "Supreme Court hears petitions challenging recent electoral bond scheme",
+    "Parliament debates new cybersecurity policy amid rising digital threats",
+    "Finance Minister unveils budget with increased allocation for infrastructure and defense",
 
-    "Bacteria that hunt and kill cancer cells have been discovered by researchers at the "
-    "University of California. The organisms target tumours while leaving healthy tissue intact.",
+    # Long (Political-focused)
+    "The government has passed a new data protection bill aimed at strengthening user privacy and regulating how companies collect and process personal data, with provisions for stricter penalties and oversight mechanisms.",
 
-    "Netanyahu video sparks AI debate after a disappearing ring moment went viral on social "
-    "media. Experts remain divided on whether the footage was digitally altered.",
+    "The Supreme Court is currently hearing multiple petitions challenging the legality and transparency of the electoral bond scheme, with petitioners arguing that it undermines accountability in political funding.",
 
-    "PSL 2026 is set to be played behind closed doors due to the escalating West Asia "
-    "conflict, the Pakistan Cricket Board confirmed in an official statement on Friday.",
+    "Parliament witnessed intense debates over a proposed cybersecurity policy designed to address increasing digital threats, with lawmakers discussing measures for data security, surveillance, and national defense.",
 
-    "Researchers have uncovered the world's oldest known cave art, a 67,800-year-old hand "
-    "stencil in Indonesia, hinting at early symbolic thinking and possibly spiritual beliefs.",
+    "The Finance Minister presented the annual budget outlining increased spending on infrastructure, defense, and public welfare programs, while also addressing concerns over fiscal deficit and economic growth."
 ]
 
 # -------------------------------------------------------
@@ -318,7 +322,8 @@ def predict(text, lr, xgb, tfidf, scaler, bert, explainer, tp, fb, rs):
     xgb_prob  = float(xgb.predict_proba(X_combined)[0, 1])
     bert_prob = float(bert.predict_proba([cleaned])[0])
 
-    lr_and_xgb_avg = (lr_prob * 0.35 + xgb_prob * 0.40) / 0.75
+    # Weights: XGBoost 40%, LR 20%, BERT 40%
+    lr_and_xgb_avg = (lr_prob * 0.20 + xgb_prob * 0.40) / 0.60
 
     bert_outlier = (
         bert_prob > 0.7 and lr_prob < 0.4 and xgb_prob < 0.4
@@ -330,7 +335,7 @@ def predict(text, lr, xgb, tfidf, scaler, bert, explainer, tp, fb, rs):
         ensemble_prob   = lr_and_xgb_avg
         ensemble_source = "LR + XGBoost consensus (BERT excluded — outlier)"
     else:
-        ensemble_prob   = (lr_prob * 0.35) + (xgb_prob * 0.40) + (bert_prob * 0.25)
+        ensemble_prob   = (lr_prob * 0.20) + (xgb_prob * 0.40) + (bert_prob * 0.40)
         ensemble_source = "weighted ensemble"
 
     ensemble_risk = rs.score_ensemble(ensemble_prob)
@@ -819,7 +824,7 @@ def main():
     # Primary result — ensemble
     section_title(
         "Primary Assessment",
-        "Weighted ensemble — XGBoost 40% · Logistic Regression 35% · BERT 25%",
+        "Weighted ensemble — XGBoost 40% · BERT 40% · Logistic Regression 20%",
     )
 
     primary_result_card(
