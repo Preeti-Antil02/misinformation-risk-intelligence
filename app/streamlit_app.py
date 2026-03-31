@@ -641,9 +641,136 @@ def render_sidebar():
         )
 
 # -------------------------------------------------------
+# Results renderer (extracted so it can be called from
+# both the "just analysed" path and the "reload from
+# session_state" path)
+# -------------------------------------------------------
+def render_results(results, text_input, tfidf, fb):
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Disagreement check across all models
+    risks = {results["lr"]["risk"], results["xgb"]["risk"],
+             results["bert"]["risk"]}
+    if len(risks) > 1:
+        disagreement_banner()
+
+    # Primary result — ensemble
+    section_title(
+        "Primary Assessment",
+        "Weighted ensemble — XGBoost 40% · BERT 40% · Logistic Regression 20%",
+    )
+
+    primary_result_card(
+        results["ensemble"]["risk"],
+        results["ensemble"]["prob"],
+        label=results["ensemble_source"],
+    )
+
+    is_political = any(w in text_input.lower() for w in POLITICAL_WORDS)
+    ensemble_risk = results["ensemble"]["risk"]
+
+    if ensemble_risk in ("High", "Critical") and is_political:
+        context_note(
+            "This text contains political or geopolitical terms. "
+            "The model may reflect training data patterns rather than factual inaccuracy. "
+            "Verify with a reliable source before drawing conclusions."
+        )
+    elif ensemble_risk in ("High", "Critical"):
+        context_note(
+            "High probability reflects learned patterns, not verified facts. "
+            "This system is a risk indicator, not a fact-checker."
+        )
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Model comparison
+    section_title(
+        "Model Comparison",
+        "Three independent models — disagreement indicates uncertainty",
+    )
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        model_card("Logistic Regression · TF-IDF",
+                   results["lr"]["risk"], results["lr"]["prob"])
+    with c2:
+        model_card("XGBoost · TF-IDF + Features",
+                   results["xgb"]["risk"], results["xgb"]["prob"])
+    with c3:
+        model_card("BERT · Transformer",
+                   results["bert"]["risk"], results["bert"]["prob"])
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # SHAP explainability
+    section_title(
+        "Explainability",
+        "XGBoost + SHAP — which words drive the prediction",
+    )
+
+    top_words = get_top_shap_words(
+        results["shap_values"], results["X_combined"], tfidf, fb, n=15
+    )
+
+    col_text, col_chart = st.columns([1, 1])
+
+    with col_text:
+        st.markdown(
+            '<div style="font-size:12px;color:#6e7f96;margin-bottom:10px;'
+            'font-family:Space Grotesk,sans-serif;">'
+            '<span style="color:#f85149;font-weight:600;">■ Red</span>'
+            '&nbsp;pushes toward FAKE &nbsp;·&nbsp;'
+            '<span style="color:#3fb950;font-weight:600;">■ Green</span>'
+            '&nbsp;pushes toward REAL'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        highlighted = highlight_text(results["cleaned_text"], top_words)
+        st.markdown(
+            '<div style="'
+            'background:#0d1420;border:1px solid #1a2235;border-radius:14px;'
+            'padding:18px;font-size:14px;line-height:1.9;color:#c9d1d9;'
+            'font-family:Space Grotesk,sans-serif;">' + highlighted + '</div>',
+            unsafe_allow_html=True,
+        )
+
+    with col_chart:
+        fig = plot_shap_bar(top_words)
+        st.pyplot(fig, use_container_width=True)
+        plt.close()
+
+    # Contribution table
+    st.markdown("<br>", unsafe_allow_html=True)
+    section_title("Feature Contributions", "Ranked by absolute SHAP value")
+
+    contrib_df = pd.DataFrame(top_words, columns=["Feature", "SHAP Value"])
+    contrib_df["Direction"] = contrib_df["SHAP Value"].apply(
+        lambda v: "→ FAKE" if v > 0 else "→ REAL"
+    )
+    contrib_df["SHAP Value"] = contrib_df["SHAP Value"].round(4)
+    st.dataframe(contrib_df, use_container_width=True, hide_index=True)
+
+    # Domain warning
+    if not is_political:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.warning(
+            "⚠️ This text does not appear to be political news. "
+            "Models were trained on the ISOT political news dataset — "
+            "predictions on other domains may be unreliable."
+        )
+
+# -------------------------------------------------------
 # Main
 # -------------------------------------------------------
 def main():
+    # ── Initialise session state keys ────────────────────────────────────
+    if "preload_text" not in st.session_state:
+        st.session_state["preload_text"] = ""
+    if "last_results" not in st.session_state:
+        st.session_state["last_results"] = None
+    if "last_input" not in st.session_state:
+        st.session_state["last_input"] = ""
+
     render_sidebar()
 
     # ── TOP NAV BAR — shield emoji bare (no box), RiskLens narrower ──────
@@ -784,14 +911,42 @@ def main():
         if st.button("Load fake example", type="secondary", use_container_width=True):
             import random
             st.session_state["preload_text"] = random.choice(FAKE_EXAMPLES)
+            st.session_state["last_results"] = None  # clear stale results
+            st.session_state["last_input"] = ""
             st.rerun()
     with col_real:
         if st.button("Load real example", type="secondary", use_container_width=True):
             import random
             st.session_state["preload_text"] = random.choice(REAL_EXAMPLES)
+            st.session_state["last_results"] = None  # clear stale results
+            st.session_state["last_input"] = ""
             st.rerun()
 
-    if not run or not text_input.strip():
+    # ── Run analysis and persist results in session_state ─────────────────
+    if run:
+        if not text_input.strip():
+            pass  # fall through to the empty-state placeholder below
+        elif len(text_input.split()) < 5:
+            st.warning("Please enter at least a few sentences for meaningful analysis.")
+        else:
+            with st.spinner("Running analysis across all models..."):
+                results = predict(
+                    text_input, lr, xgb, tfidf, scaler,
+                    bert, explainer, tp, fb, rs
+                )
+            # Persist so results survive reruns
+            st.session_state["last_results"] = results
+            st.session_state["last_input"]   = text_input
+
+    # ── Display results (from session_state so they survive reruns) ───────
+    if st.session_state["last_results"] is not None:
+        render_results(
+            st.session_state["last_results"],
+            st.session_state["last_input"],
+            tfidf,
+            fb,
+        )
+    else:
         st.markdown(
             '<div style="text-align:center;padding:52px 0;color:#1a2235;">'
             '<div style="font-size:42px;margin-bottom:14px;'
@@ -800,130 +955,6 @@ def main():
             'font-family:Space Grotesk,sans-serif;">Enter text above and click Analyse</div>'
             '</div>',
             unsafe_allow_html=True,
-        )
-        return
-
-    if len(text_input.split()) < 5:
-        st.warning("Please enter at least a few sentences for meaningful analysis.")
-        return
-
-    with st.spinner("Running analysis across all models..."):
-        results = predict(
-            text_input, lr, xgb, tfidf, scaler,
-            bert, explainer, tp, fb, rs
-        )
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    # Disagreement check across all models
-    risks = {results["lr"]["risk"], results["xgb"]["risk"],
-             results["bert"]["risk"]}
-    if len(risks) > 1:
-        disagreement_banner()
-
-    # Primary result — ensemble
-    section_title(
-        "Primary Assessment",
-        "Weighted ensemble — XGBoost 40% · BERT 40% · Logistic Regression 20%",
-    )
-
-    primary_result_card(
-        results["ensemble"]["risk"],
-        results["ensemble"]["prob"],
-        label=results["ensemble_source"],
-    )
-
-    is_political = any(w in text_input.lower() for w in POLITICAL_WORDS)
-    ensemble_risk = results["ensemble"]["risk"]
-
-    if ensemble_risk in ("High", "Critical") and is_political:
-        context_note(
-            "This text contains political or geopolitical terms. "
-            "The model may reflect training data patterns rather than factual inaccuracy. "
-            "Verify with a reliable source before drawing conclusions."
-        )
-    elif ensemble_risk in ("High", "Critical"):
-        context_note(
-            "High probability reflects learned patterns, not verified facts. "
-            "This system is a risk indicator, not a fact-checker."
-        )
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    # Model comparison
-    section_title(
-        "Model Comparison",
-        "Three independent models — disagreement indicates uncertainty",
-    )
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        model_card("Logistic Regression · TF-IDF",
-                   results["lr"]["risk"], results["lr"]["prob"])
-    with c2:
-        model_card("XGBoost · TF-IDF + Features",
-                   results["xgb"]["risk"], results["xgb"]["prob"])
-    with c3:
-        model_card("BERT · Transformer",
-                   results["bert"]["risk"], results["bert"]["prob"])
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    # SHAP explainability
-    section_title(
-        "Explainability",
-        "XGBoost + SHAP — which words drive the prediction",
-    )
-
-    top_words = get_top_shap_words(
-        results["shap_values"], results["X_combined"], tfidf, fb, n=15
-    )
-
-    col_text, col_chart = st.columns([1, 1])
-
-    with col_text:
-        st.markdown(
-            '<div style="font-size:12px;color:#6e7f96;margin-bottom:10px;'
-            'font-family:Space Grotesk,sans-serif;">'
-            '<span style="color:#f85149;font-weight:600;">■ Red</span>'
-            '&nbsp;pushes toward FAKE &nbsp;·&nbsp;'
-            '<span style="color:#3fb950;font-weight:600;">■ Green</span>'
-            '&nbsp;pushes toward REAL'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-        highlighted = highlight_text(results["cleaned_text"], top_words)
-        st.markdown(
-            '<div style="'
-            'background:#0d1420;border:1px solid #1a2235;border-radius:14px;'
-            'padding:18px;font-size:14px;line-height:1.9;color:#c9d1d9;'
-            'font-family:Space Grotesk,sans-serif;">' + highlighted + '</div>',
-            unsafe_allow_html=True,
-        )
-
-    with col_chart:
-        fig = plot_shap_bar(top_words)
-        st.pyplot(fig, use_container_width=True)
-        plt.close()
-
-    # Contribution table
-    st.markdown("<br>", unsafe_allow_html=True)
-    section_title("Feature Contributions", "Ranked by absolute SHAP value")
-
-    contrib_df = pd.DataFrame(top_words, columns=["Feature", "SHAP Value"])
-    contrib_df["Direction"] = contrib_df["SHAP Value"].apply(
-        lambda v: "→ FAKE" if v > 0 else "→ REAL"
-    )
-    contrib_df["SHAP Value"] = contrib_df["SHAP Value"].round(4)
-    st.dataframe(contrib_df, use_container_width=True, hide_index=True)
-
-    # Domain warning
-    if not is_political:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.warning(
-            "⚠️ This text does not appear to be political news. "
-            "Models were trained on the ISOT political news dataset — "
-            "predictions on other domains may be unreliable."
         )
 
 
