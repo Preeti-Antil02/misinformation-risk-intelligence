@@ -73,7 +73,7 @@ def main():
     # Load dataset
     # ---------------------------
     loader = DataLoader()
-    df = loader.load_isot()
+    df = loader.load_combined()
 
     cleaner = DataCleaner()
     df = cleaner.remove_duplicates(df)

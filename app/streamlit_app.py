@@ -242,8 +242,6 @@ FAKE_EXAMPLES = [
     # Long
     "A viral report circulating on social media claims that a group of international scientists has discovered that drinking hot water every hour can eliminate cancer cells completely within 72 hours, a finding that pharmaceutical companies are allegedly trying to suppress to protect chemotherapy profits.",
 
-    "According to an anonymous government insider, recent COVID booster vaccines contain nanochips designed to monitor and influence human behavior, with several leaked documents suggesting a global surveillance program is already underway.",
-
     "Multiple online sources are claiming that NASA has found an ancient alien city buried beneath the surface of Mars, but the agency is deliberately withholding photographic evidence to avoid public panic and maintain control over extraterrestrial discoveries.",
 
     "A widely shared article suggests that modern smartphones are equipped with advanced sensors capable of interpreting brain signals, allowing companies to read users' thoughts and predict decisions without their consent.",
@@ -260,7 +258,6 @@ REAL_EXAMPLES = [
     "Finance Minister unveils budget with increased allocation for infrastructure and defense",
 
     # Long (Political-focused)
-    "The government has passed a new data protection bill aimed at strengthening user privacy and regulating how companies collect and process personal data, with provisions for stricter penalties and oversight mechanisms.",
 
     "The Supreme Court is currently hearing multiple petitions challenging the legality and transparency of the electoral bond scheme, with petitioners arguing that it undermines accountability in political funding.",
 
