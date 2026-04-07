@@ -16,3 +16,9 @@ data/
 .DS_Store
 
 notebooks/
+
+models/
+*.pkl
+*.bin
+*.pt
+*.safetensors
