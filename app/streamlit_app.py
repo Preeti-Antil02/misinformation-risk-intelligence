@@ -1,7 +1,6 @@
 """
 Misinformation Risk Intelligence System
 """
-
 import os
 import re
 import joblib
@@ -201,13 +200,16 @@ REAL_EXAMPLES = [
 # -------------------------------------------------------
 @st.cache_resource(show_spinner="Loading intelligence models...")
 def load_all_models():
-    lr     = joblib.load("models/baseline_logistic.pkl")
-    xgb    = joblib.load("models/xgboost_model.pkl")
-    tfidf  = joblib.load("models/tfidf_vectorizer.pkl")
-    scaler = joblib.load("models/numeric_scaler.pkl")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    MODELS   = os.path.join(BASE_DIR, "models")
+
+    lr     = joblib.load(os.path.join(MODELS, "baseline_logistic.pkl"))
+    xgb    = joblib.load(os.path.join(MODELS, "xgboost_model.pkl"))
+    tfidf  = joblib.load(os.path.join(MODELS, "tfidf_vectorizer.pkl"))
+    scaler = joblib.load(os.path.join(MODELS, "numeric_scaler.pkl"))
 
     roberta = RobertaClassifier()
-    roberta.load("models/roberta_finetuned")
+    roberta.load(os.path.join(MODELS, "roberta_finetuned"))
 
     qwen = QwenClassifier()   # lazy-loads on first predict call
 
