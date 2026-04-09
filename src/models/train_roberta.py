@@ -1,9 +1,10 @@
-# run: python -m src.models.train_bert
+# src/models/train_roberta.py
+# run: python -m src.models.train_roberta
 
 from src.data_loader import DataLoader
 from src.preprocessing import DataCleaner
 from src.features.text_preprocessor import TextPreprocessor
-from src.models.bert_model import BertClassifier
+from src.models.roberta_model import RobertaClassifier
 
 from sklearn.model_selection import train_test_split
 
@@ -16,7 +17,6 @@ def main():
     df = loader.load_combined(sample_welfake=False)
 
     cleaner = DataCleaner(min_words=3)
-
     df = cleaner.remove_duplicates(df)
     df = cleaner.remove_nulls(df)
     df = cleaner.remove_short_texts(df)
@@ -27,7 +27,7 @@ def main():
 
     tp = TextPreprocessor()
     df["text"] = df["text"].apply(tp.basic_clean)
-    df["text"] = df["text"].apply(tp.truncate)    
+    df["text"] = df["text"].apply(tp.truncate)
 
     X = df["text"]
     y = df["label"]
@@ -37,22 +37,23 @@ def main():
         y,
         test_size=0.2,
         stratify=y,
-        random_state=42
+        random_state=42,
     )
 
-    print("Fine-tuning BERT...")
+    print("Fine-tuning RoBERTa...")
 
-    bert = BertClassifier()
+    roberta = RobertaClassifier()
 
-    bert.fit(
+    roberta.fit(
         X_train.tolist(),
         y_train.tolist(),
-        epochs=2,       
-        batch_size=16
+        epochs=2,
+        batch_size=16,
     )
-    bert.save("models/bert_finetuned")
 
-    print("BERT fine-tuned and saved.")
+    roberta.save("models/roberta_finetuned")
+
+    print("RoBERTa fine-tuned and saved.")
 
 
 if __name__ == "__main__":
