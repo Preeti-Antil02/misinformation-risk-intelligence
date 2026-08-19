@@ -23,5 +23,30 @@
       0.406,
       0.352
     ]
+  },
+  {
+    "timestamp": "2026-08-19 17:45:26 UTC",
+    "endpoint": "predict",
+    "test_type": "WARM_INFERENCE",
+    "sample_count": 10,
+    "success_rate_pct": 100.0,
+    "min_sec": 5.343,
+    "mean_sec": 6.441,
+    "p50_sec": 6.199,
+    "p95_sec": 7.92,
+    "max_sec": 8.292,
+    "space_stage": "RUNNING",
+    "raw_latencies": [
+      6.869,
+      5.808,
+      5.343,
+      6.401,
+      7.466,
+      5.37,
+      5.996,
+      6.95,
+      5.915,
+      8.292
+    ]
   }
 ]
