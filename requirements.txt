@@ -28,6 +28,7 @@ shap==0.45.1
 # NLP, Transformers & Deep Learning
 torch==2.13.0
 transformers==4.38.2
+spacy>=3.7.0
 tqdm==4.67.1
 langdetect==1.0.9
 nltk==3.9.2
