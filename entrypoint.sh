@@ -3,16 +3,20 @@ set -e
 
 echo "🛡️ Starting RiskLens v2.1.0 Enterprise Container..."
 
-# Determine persistent database directory
-if [ -d "/data" ]; then
+# Ensure writeable cache directories for HF non-root execution (UID 1000)
+export HOME="${HOME:-/tmp}"
+export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-/tmp/hf_cache}"
+export HF_HOME="${HF_HOME:-/tmp/hf_cache}"
+
+if [ -d "/data" ] && [ -w "/data" ]; then
     export DATABASE_DIR="/data"
-    echo "📦 Persistent storage detected at /data. Using DATABASE_DIR=/data"
+    echo "📦 Persistent storage detected at /data."
 else
-    export DATABASE_DIR="/app/databases"
-    echo "⚠️ Running in ephemeral mode. Using DATABASE_DIR=/app/databases"
+    export DATABASE_DIR="/tmp/databases"
+    echo "⚠️ Using writeable storage at /tmp/databases."
 fi
 
-mkdir -p "$DATABASE_DIR" /app/logs /app/scratch /app/results
+mkdir -p "$DATABASE_DIR" /tmp/logs /tmp/scratch /tmp/results /tmp/hf_cache /app/logs /app/databases 2>/dev/null || true
 
 # 1. Start Streamlit Dashboard in background on port 8501
 echo "🌐 [1/3] Launching Streamlit Dashboard on 127.0.0.1:8501..."

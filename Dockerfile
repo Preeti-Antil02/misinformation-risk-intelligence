@@ -2,6 +2,7 @@
 # RiskLens v2.1.0 Enterprise Production Dockerfile for Hugging Face Spaces
 # Multi-Process Architecture:
 # FastAPI Enterprise Gateway (0.0.0.0:7860) -> Streamlit Dashboard (127.0.0.1:8501)
+# Fully compliant with Hugging Face non-root UID 1000 execution
 # ============================================================================
 
 FROM python:3.11-slim
@@ -10,9 +11,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PORT=7860 \
-    DATABASE_DIR=/app/databases \
-    TRANSFORMERS_CACHE=/root/.cache/huggingface/hub \
-    HF_HOME=/root/.cache/huggingface/hub
+    HOME=/tmp \
+    DATABASE_DIR=/tmp/databases \
+    TRANSFORMERS_CACHE=/tmp/hf_cache \
+    HF_HOME=/tmp/hf_cache
 
 WORKDIR /app
 
@@ -47,9 +49,10 @@ COPY api.py /app/api.py
 COPY app.py /app/app.py
 COPY entrypoint.sh /app/entrypoint.sh
 
-# Ensure persistent mount directories exist, sanitize Windows CRLF endings, and make executable
-RUN mkdir -p /app/databases /app/logs /app/scratch /app/results /data && \
+# Ensure persistent mount directories exist, sanitize Windows CRLF endings, and grant universal permissions
+RUN mkdir -p /app/databases /app/logs /app/scratch /app/results /data /tmp/hf_cache /tmp/databases /tmp/logs && \
     sed -i 's/\r$//' /app/entrypoint.sh && \
+    chmod -R 777 /app /tmp /data 2>/dev/null || true && \
     chmod +x /app/entrypoint.sh
 
 # Expose Hugging Face Space default port
