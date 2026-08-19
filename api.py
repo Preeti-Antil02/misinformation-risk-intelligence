@@ -753,11 +753,13 @@ async def streamlit_http_proxy(request: Request, full_path: str):
         excluded_headers = {"host", "content-length", "connection", "upgrade"}
         headers = [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in excluded_headers]
         
+        body = await request.body() if request.method not in ("GET", "HEAD", "OPTIONS") else None
+        
         req = http_client.build_request(
             request.method,
             url,
             headers=headers,
-            content=request.stream()
+            content=body
         )
         resp = await http_client.send(req, stream=True)
         return StreamingResponse(
@@ -767,13 +769,23 @@ async def streamlit_http_proxy(request: Request, full_path: str):
             background=BackgroundTask(resp.aclose)
         )
     except Exception as e:
+        logger.debug(f"Streamlit HTTP proxy fallback ({full_path}): {e}")
         return HTMLResponse(
-            f"<html><head><meta http-equiv='refresh' content='2'><title>RiskLens Initializing...</title></head>"
-            f"<body style='background:#0B0E17;color:#F8FAFC;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'>"
-            f"<div style='text-align:center;padding:2rem;background:#14182A;border-radius:12px;border:1px solid #2E3856;'>"
-            f"<h2 style='color:#818CF8;'>🛡️ RiskLens Enterprise Initializing</h2>"
-            f"<p style='color:#94A3B8;'>Streamlit dashboard is starting up on CPU basic hardware... (Auto-refreshing)</p>"
+            f"<!DOCTYPE html><html><head><meta http-equiv='refresh' content='3'><title>RiskLens Enterprise Portal</title>"
+            f"<style>body{{margin:0;padding:0;background:#0B0E17;color:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;}}"
+            f".card{{text-align:center;padding:2.5rem;background:#14182A;border-radius:16px;border:1px solid #2E3856;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);max-width:520px;}}"
+            f"h1{{color:#818CF8;font-size:1.6rem;margin-top:0;}}p{{color:#94A3B8;font-size:0.95rem;line-height:1.5;}}"
+            f".spinner{{border:3px solid rgba(255,255,255,0.1);border-top:3px solid #818CF8;border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;margin:1.5rem auto 1rem;}}"
+            f"@keyframes spin{{0%{{transform:rotate(0deg);}}100%{{transform:rotate(360deg);}}}}"
+            f".links{{margin-top:1.5rem;display:flex;gap:1rem;justify-content:center;}}"
+            f".links a{{color:#38BDF8;text-decoration:none;font-weight:600;font-size:0.9rem;padding:6px 12px;background:#1E293B;border-radius:6px;border:1px solid #334155;}}"
+            f"</style></head><body><div class='card'>"
+            f"<h1>🛡️ RiskLens Enterprise Intelligence</h1>"
+            f"<div class='spinner'></div>"
+            f"<p>The Streamlit UI and ensemble models are initializing on free-tier CPU hardware.<br>This page will automatically refresh once ready.</p>"
+            f"<div class='links'><a href='/health'>🏥 System Health</a><a href='/docs'>📖 API Docs</a><a href='/version'>🏷️ Release Info</a></div>"
             f"</div></body></html>",
-            status_code=503
+            status_code=200
         )
+
 
