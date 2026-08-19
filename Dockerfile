@@ -54,8 +54,4 @@ RUN mkdir -p /app/databases /app/logs /app/scratch /app/results /data && \
 # Expose Hugging Face Space default port
 EXPOSE 7860
 
-# Health probe for container readiness
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:7860/health || exit 1
-
 ENTRYPOINT ["/app/entrypoint.sh"]
