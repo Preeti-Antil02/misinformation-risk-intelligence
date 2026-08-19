@@ -241,9 +241,9 @@ def main():
         print(f"  ❌ FAIL ({res1['elapsed_ms']} ms) — {res1.get('error')}")
 
     # 2. Fast Neural Ensemble Prediction (/predict)
-    print("\n[2/6] 🧠 Testing Neural 5-Model Ensemble Classification (/predict)...")
+    print("\n[2/6] 🧠 Testing Calibrated Neural Ensemble Classification (/predict)...")
     res2 = test_neural_ensemble_prediction(space_url)
-    results.append(("Neural 5-Model Ensemble", res2))
+    results.append(("Calibrated Neural Ensemble", res2))
     if res2["pass"]:
         print(f"  ✅ PASS ({res2['elapsed_ms']} ms) — Verdict: {res2.get('risk_level')} (Prob: {res2.get('probability')}) [Calibrated: {res2.get('is_calibrated')}]")
     else:

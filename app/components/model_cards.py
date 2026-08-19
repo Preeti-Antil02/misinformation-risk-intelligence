@@ -1,7 +1,7 @@
 """
 app/components/model_cards.py
 =============================
-4-Model Comparative Analysis Grid.
+Multi-Model Comparative Analysis Grid.
 """
 
 import streamlit as st
@@ -10,14 +10,17 @@ from app.config import RISK_CONFIG
 
 def render_model_cards(results: dict):
     """
-    Renders a 4-column responsive grid comparing all base Level-0 classifiers.
+    Renders a 4-column responsive grid comparing all active production classifiers.
     """
     c1, c2, c3, c4 = st.columns(4)
+    ensemble_prob = results.get("ensemble", {}).get("prob", 0.5)
+    ensemble_risk = results.get("ensemble", {}).get("risk", "Moderate")
+
     models = [
         (c1, "Logistic Regression", "TF-IDF N-grams", results["lr"]["prob"], results["lr"]["risk"]),
-        (c2, "XGBoost Classifier", "TF-IDF + 7 Signals", results["xgb"]["prob"], results["xgb"]["risk"]),
-        (c3, "RoBERTa Classifier", "Neural Transformer", results["roberta"]["prob"], results["roberta"]["risk"]),
-        (c4, "Qwen2.5-3B SLM", "Zero-Shot Reasoning", results["qwen"]["prob"], results["qwen"]["risk"]),
+        (c2, "XGBoost Classifier", "10 Linguistic Signals", results["xgb"]["prob"], results["xgb"]["risk"]),
+        (c3, "RoBERTa Transformer", "Deep Saliency", results["roberta"]["prob"], results["roberta"]["risk"]),
+        (c4, "Calibrated Stacking", "Platt Meta-Ensemble", ensemble_prob, ensemble_risk),
     ]
 
     for col, name, desc, prob, risk in models:

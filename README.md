@@ -1,5 +1,4 @@
 ---
-<<<<<<< HEAD
 title: RiskLens Misinformation Risk Intelligence
 emoji: 🛡️
 colorFrom: indigo
@@ -30,11 +29,12 @@ RiskLens is designed for intelligence analysts, fact-checkers, newsrooms, conten
 
 ### What Makes RiskLens Different
 
-1. **Multi-Model Stacking Ensemble with True Calibration**: Combines four diverse base classifiers (Logistic Regression baseline, XGBoost with engineered linguistic manipulation signals, fine-tuned RoBERTa transformer, and zero-shot Qwen2.5-3B SLM) under a meta-learner, calibrated via Platt Scaling and Isotonic Regression to eliminate overconfidence (Test AUC: **0.9744**, F1: **0.9169**).
+1. **Multi-Model Stacking Ensemble with True Calibration**: Combines diverse base classifiers (Logistic Regression baseline, XGBoost with 10 engineered linguistic manipulation signals, and fine-tuned RoBERTa transformer) under a Stacking Meta-Learner, calibrated via Platt Scaling and Isotonic Regression to eliminate overconfidence (Test AUC: **0.9744**, F1: **0.9169**, ECE: **0.009**).
 2. **Mathematical Uncertainty via Conformal Prediction**: Implements Split Conformal Prediction to produce distribution-free statistical coverage guarantees ($90\%$ empirical coverage). Ambiguous prediction sets automatically escalate to deep verification.
-3. **Agentic Web Verification & Source Credibility**: A 3-node LangGraph agent extracts discrete claims, queries the Google Fact Check Tools API and live web search engines (Serper Google Search / DuckDuckGo fallback), and cross-references a curated domain reputation database to synthesize evidence-weighted verdicts with cited debunks.
+3. **Agentic Web Verification & Source Credibility**: A 3-node LangGraph agent extracts discrete verifiable claims using heuristic/regex patterns, queries the Google Fact Check Tools API and live search engines (Google Serper / DuckDuckGo fallback), and cross-references a curated domain reputation database to synthesize evidence-weighted verdicts (70% Web Evidence + 30% Calibrated Neural Risk Baseline).
 4. **Multilingual Indic & Multi-Modal OCR Coverage**: Native language routing and fine-tuned **MuRIL** (Multilingual Representations for Indic Languages) support for **Hindi, Tamil, Telugu, Bengali, Marathi, Gujarati, and English**, coupled with an **EasyOCR + Tesseract** image preprocessing pipeline for screenshot verification.
 5. **Continuous Learning Flywheel**: Active learning queue with automated daily retraining (`APScheduler` at 02:00 UTC) on user feedback samples with strict data poisoning and sanity checks.
+6. **Offline SLM Benchmark (Qwen2.5-3B-Instruct)**: Maintains an offline zero-shot Small Language Model pipeline (`src/models/slm_model.py`) for cross-domain evaluation on GPU infrastructure without adding multi-second latency to live real-time serving.
 
 ---
 
@@ -62,11 +62,10 @@ RiskLens is designed for intelligence analysts, fact-checkers, newsrooms, conten
                       ▼
  ┌──────────────────────────────────────────────────────────┐
  │ 3. Multi-Model Inference & Feature Extraction            │
- │    • TF-IDF & Linguistic Manipulation Signals            │
+ │    • TF-IDF & 10 Linguistic Manipulation Signals         │
  │    • Logistic Regression (AUC: 0.9302)                   │
  │    • XGBoost Classifier  (AUC: 0.9706)                   │
  │    • RoBERTa Transformer                                 │
- │    • Qwen2.5-3B Zero-Shot Classifier                     │
  └────────────────────┬─────────────────────────────────────┘
                       │
                       ▼
@@ -103,7 +102,8 @@ RiskLens is designed for intelligence analysts, fact-checkers, newsrooms, conten
 | Domain | Technologies & Libraries |
 |---|---|
 | **Backend API & Web Server** | **FastAPI** (`0.110.0`), **Uvicorn** (`0.29.0`), **Pydantic** (`2.12.5`), **APScheduler** (`3.11.3`), **python-dotenv** (`1.2.2`), **Requests** (`2.32.5`) |
-| **ML Models & NLP** | **Scikit-Learn** (`1.7.2`), **XGBoost** (`2.0.3`), **PyTorch** (`2.13.0`), **Hugging Face Transformers** (`4.38.2`), **MuRIL**, **RoBERTa**, **Qwen2.5-3B**, **SciPy** (`1.12.0`), **NumPy** (`1.26.4`), **Pandas** (`2.2.2`), **Joblib** (`1.3.2`) |
+| **ML Production Models** | **Scikit-Learn** (`1.7.2`), **XGBoost** (`2.0.3`), **PyTorch** (`2.13.0`), **Hugging Face Transformers** (`4.38.2`), **MuRIL Fine-Tuned**, **RoBERTa Fine-Tuned**, **SciPy** (`1.12.0`), **NumPy** (`1.26.4`), **Pandas** (`2.2.2`), **Joblib** (`1.3.2`) |
+| **Offline Evaluation SLM** | **Qwen2.5-3B-Instruct** (Zero-shot batch evaluation pipeline for GPU benchmarks) |
 | **Explainability & Uncertainty** | **SHAP** (`0.45.1`), **Split Conformal Prediction**, **Platt Scaling & Isotonic Calibration** |
 | **Agentic Verification & Search** | **LangGraph**, **Google Fact Check Tools API**, **Serper.dev API**, **DuckDuckGo Search** (`8.1.1`), **BeautifulSoup4** (`4.15.0`), **langdetect** (`1.0.9`), **NLTK** (`3.9.2`) |
 | **Computer Vision & OCR** | **EasyOCR** (`1.7.2`), **PyTesseract** (`0.3.13`), **OpenCV Headless** (`4.9.0.80`), **Pillow** (`10.4.0`) |

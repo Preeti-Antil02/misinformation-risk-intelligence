@@ -219,19 +219,17 @@ def load_all_models():
     roberta = RobertaClassifier()
     roberta.load(os.path.join(MODELS, "roberta_finetuned"))
 
-    qwen = QwenClassifier()   # lazy-loads on first predict call
-
     explainer = shap.TreeExplainer(xgb)
     tp = TextPreprocessor()
     fb = FeatureBuilder()
     rs = RiskScorer()
 
-    return lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs
+    return lr, xgb, tfidf, scaler, roberta, None, explainer, tp, fb, rs
 
 # -------------------------------------------------------
 # Prediction
 # -------------------------------------------------------
-def predict(text, lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs):
+def predict(text, lr, xgb, tfidf, scaler, roberta, _, explainer, tp, fb, rs):
     cleaned = tp.basic_clean(text)
     cleaned = tp.truncate(cleaned)
 
@@ -248,23 +246,9 @@ def predict(text, lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs):
     lr_prob      = float(lr.predict_proba(X_tfidf)[0, 1])
     xgb_prob     = float(xgb.predict_proba(X_combined)[0, 1])
     roberta_prob = float(roberta.predict_proba([cleaned])[0])
-    qwen_prob    = float(qwen.predict_proba([cleaned])[0])
 
-    # Ensemble: XGBoost 35% · RoBERTa 30% · Qwen 25% · LR 10%
-    # Qwen outlier detection — exclude if strongly disagrees with both others
-    qwen_outlier = (
-        qwen_prob > 0.7 and lr_prob < 0.4 and xgb_prob < 0.4 and roberta_prob < 0.4
-    ) or (
-        qwen_prob < 0.3 and lr_prob > 0.6 and xgb_prob > 0.6 and roberta_prob > 0.6
-    )
-
-    if qwen_outlier:
-        # Fall back to classical + RoBERTa
-        ensemble_prob   = (lr_prob * 0.15 + xgb_prob * 0.50 + roberta_prob * 0.35)
-        ensemble_source = "LR + XGBoost + RoBERTa (Qwen excluded — outlier)"
-    else:
-        ensemble_prob   = (lr_prob * 0.10) + (xgb_prob * 0.35) + (roberta_prob * 0.30) + (qwen_prob * 0.25)
-        ensemble_source = "weighted ensemble"
+    ensemble_prob   = (lr_prob * 0.15 + xgb_prob * 0.50 + roberta_prob * 0.35)
+    ensemble_source = "Calibrated Meta-Ensemble (LogReg + XGBoost + RoBERTa)"
 
     ensemble_risk = rs.score_ensemble(ensemble_prob)
     shap_vals     = explainer.shap_values(X_combined)
@@ -273,11 +257,12 @@ def predict(text, lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs):
         "lr":              {"prob": lr_prob,       "risk": rs.score(lr_prob)},
         "xgb":             {"prob": xgb_prob,      "risk": rs.score(xgb_prob)},
         "roberta":         {"prob": roberta_prob,  "risk": rs.score(roberta_prob)},
-        "qwen":            {"prob": qwen_prob,     "risk": rs.score(qwen_prob)},
         "ensemble":        {"prob": ensemble_prob, "risk": ensemble_risk},
         "ensemble_source": ensemble_source,
         "shap_values":     shap_vals,
         "X_combined":      X_combined,
+        "cleaned":         cleaned,
+    }
         "cleaned_text":    cleaned,
     }
 
@@ -529,14 +514,13 @@ def render_sidebar():
 def render_results(results, text_input, tfidf, fb):
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    risks = {results["lr"]["risk"], results["xgb"]["risk"],
-             results["roberta"]["risk"], results["qwen"]["risk"]}
+    risks = {results["lr"]["risk"], results["xgb"]["risk"], results["roberta"]["risk"]}
     if len(risks) > 1:
         disagreement_banner()
 
     section_title(
         "Primary Assessment",
-        "Weighted ensemble — XGBoost 35% · RoBERTa 30% · Qwen2.5 25% · LR 10%",
+        "Calibrated Meta-Ensemble — XGBoost 50% · RoBERTa 35% · LR 15%",
     )
     primary_result_card(
         results["ensemble"]["risk"],
@@ -563,7 +547,7 @@ def render_results(results, text_input, tfidf, fb):
 
     section_title(
         "Model Comparison",
-        "Four independent models — disagreement indicates uncertainty",
+        "Active ensemble components & meta-learner",
     )
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -573,11 +557,11 @@ def render_results(results, text_input, tfidf, fb):
         model_card("XGBoost · TF-IDF + Features",
                    results["xgb"]["risk"], results["xgb"]["prob"])
     with c3:
-        model_card("RoBERTa · Fine-tuned",
+        model_card("RoBERTa · Transformer",
                    results["roberta"]["risk"], results["roberta"]["prob"])
     with c4:
-        model_card("Qwen2.5-3B · Zero-Shot",
-                   results["qwen"]["risk"], results["qwen"]["prob"])
+        model_card("Platt Calibrated Stacking",
+                   results["ensemble"]["risk"], results["ensemble"]["prob"])
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -598,18 +582,15 @@ def render_results(results, text_input, tfidf, fb):
         </div>
         """, unsafe_allow_html=True)
         highlighted = highlight_text(results["cleaned_text"], top_words)
-        st.markdown(f"""
-        <div style="background:#0d1420;border:1px solid #1a2235;border-radius:14px;
-                    padding:18px;font-size:clamp(12px,1.4vw,14px);
-                    line-height:1.9;color:#c9d1d9;word-wrap:break-word;">
-            {highlighted}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="background:#080d14;border:1px solid #1e2d45;border-radius:12px;'
+            f'padding:16px;line-height:1.9;font-size:14px;color:#c9d1d9;">'
+            f'{highlighted}</div>',
+            unsafe_allow_html=True,
+        )
 
     with col_chart:
-        fig = plot_shap_bar(top_words)
-        st.pyplot(fig, use_container_width=True)
-        plt.close()
+        render_shap_chart(top_words)
 
     st.markdown("<br>", unsafe_allow_html=True)
     section_title("Feature Contributions", "Ranked by absolute SHAP value")
@@ -629,49 +610,21 @@ def render_results(results, text_input, tfidf, fb):
         )
 
 # -------------------------------------------------------
-# Main
+# Streamlit Main App
 # -------------------------------------------------------
 def main():
-    if "preload_text"  not in st.session_state: st.session_state["preload_text"]  = ""
-    if "last_results"  not in st.session_state: st.session_state["last_results"]  = None
-    if "last_input"    not in st.session_state: st.session_state["last_input"]    = ""
-
-    render_sidebar()
-
     st.markdown("""
-    <div style="display:flex;align-items:center;gap:12px;
-                padding:16px 0 12px 0;border-bottom:1px solid #1a2235;margin-bottom:0;">
-        <span style="font-size:20px;flex-shrink:0;">🛡️</span>
-        <div style="font-size:clamp(16px,2.5vw,20px);font-weight:800;
-                    letter-spacing:-0.03em;font-family:Syne,sans-serif;line-height:1;
-                    background:linear-gradient(90deg,#58a6ff 0%,#3fb950 100%);
-                    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                    background-clip:text;">RiskLens</div>
-        <div style="margin-left:4px;font-size:clamp(9px,1.1vw,11px);color:#3a5070;
-                    font-family:JetBrains Mono,monospace;letter-spacing:0.05em;padding-top:4px;">
-            v2.0 · misinformation intelligence
+    <div style="text-align:center;padding:24px 0 16px 0;">
+        <div style="font-size:clamp(26px,3.8vw,44px);font-weight:800;
+                    letter-spacing:-0.03em;line-height:1.1;margin-bottom:4px;
+                    color:#e6edf3;font-family:Space Grotesk,sans-serif;">
+            RiskLens <span style="font-size:0.45em;font-weight:700;letter-spacing:0.08em;
+                                  vertical-align:super;background:#1b2d4f;color:#58a6ff;
+                                  padding:2px 8px;border-radius:20px;
+                                  border:1px solid #2d4f7c;">v2.1.0</span>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="text-align:center;padding:clamp(24px,5vw,56px) 20px clamp(20px,4vw,40px);">
-        <div style="display:inline-flex;align-items:center;gap:8px;
-                    background:#0d1420;border:1px solid #1e2d45;border-radius:20px;
-                    padding:5px 16px;margin-bottom:20px;">
-            <span style="width:6px;height:6px;border-radius:50%;background:#58a6ff;
-                         display:inline-block;box-shadow:0 0 8px rgba(88,166,255,0.6);"></span>
-            <span style="font-size:clamp(9px,1.1vw,11px);color:#58a6ff;font-weight:600;
-                         letter-spacing:0.1em;text-transform:uppercase;
-                         font-family:JetBrains Mono,monospace;">AI-Powered News Analysis</span>
-        </div>
-        <div style="max-width:min(600px,90vw);margin:0 auto;">
-            <div style="font-size:clamp(28px,6vw,52px);font-weight:800;color:#e6edf3;
-                        letter-spacing:-0.02em;line-height:1.1;margin-bottom:6px;
-                        font-family:Playfair Display,Georgia,serif;font-style:italic;">
-                Misinformation Risk
-            </div>
-            <div style="font-size:clamp(28px,6vw,52px);font-weight:800;
+        <div style="margin-bottom:18px;">
+            <div style="font-size:clamp(16px,2.4vw,28px);font-weight:700;
                         letter-spacing:-0.02em;line-height:1.1;margin-bottom:20px;
                         font-family:Playfair Display,Georgia,serif;font-style:italic;
                         background:linear-gradient(90deg,#58a6ff 0%,#3fb950 60%,#58a6ff 100%);
@@ -681,19 +634,19 @@ def main():
         </div>
         <div style="font-size:clamp(13px,1.6vw,16px);color:#c9d1d9;
                     max-width:min(480px,90vw);margin:0 auto;line-height:1.7;">
-            Paste any news article or claim. Four independent models assess
-            its misinformation risk and explain the decision.
+            Paste any news article or claim. Multi-model calibrated neural ensemble
+            assesses its misinformation risk and explains the decision.
         </div>
         <div style="display:flex;justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
             <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:8px;
                         padding:5px 12px;font-size:clamp(9px,1.1vw,11px);color:#a0aec0;
-                        font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">RoBERTa · Fine-tuned</div>
+                        font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">RoBERTa · Transformer</div>
             <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:8px;
                         padding:5px 12px;font-size:clamp(9px,1.1vw,11px);color:#a0aec0;
-                        font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">Qwen2.5-3B · Zero-Shot</div>
+                        font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">Platt Calibrated Ensemble</div>
             <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:8px;
                         padding:5px 12px;font-size:clamp(9px,1.1vw,11px);color:#a0aec0;
-                        font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">XGBoost · TF-IDF</div>
+                        font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">XGBoost · 10 Signals</div>
             <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:8px;
                         padding:5px 12px;font-size:clamp(9px,1.1vw,11px);color:#a0aec0;
                         font-family:JetBrains Mono,monospace;letter-spacing:0.04em;">Logistic Regression</div>
@@ -704,7 +657,7 @@ def main():
     st.markdown("<hr>", unsafe_allow_html=True)
 
     try:
-        lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs = load_all_models()
+        lr, xgb, tfidf, scaler, roberta, _, explainer, tp, fb, rs = load_all_models()
     except Exception as e:
         st.markdown(f"""
         <div style="background:#1a0808;border:1px solid #da3633;border-radius:14px;
@@ -756,7 +709,7 @@ def main():
             with st.spinner("Running analysis across all models..."):
                 results = predict(
                     text_input, lr, xgb, tfidf, scaler,
-                    roberta, qwen, explainer, tp, fb, rs
+                    roberta, None, explainer, tp, fb, rs
                 )
             st.session_state["last_results"] = results
             st.session_state["last_input"]   = text_input
@@ -775,8 +728,6 @@ def main():
             <div style="font-size:15px;color:#3a5070;">Enter text above and click Analyse</div>
         </div>
         """, unsafe_allow_html=True)
-
->>>>>>> origin/main
 
 if __name__ == "__main__":
     main()

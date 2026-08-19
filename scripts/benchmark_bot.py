@@ -4,7 +4,7 @@ scripts/benchmark_bot.py
 Automated Latency & Round-Trip Performance Benchmark Suite for RiskLens.
 Measures:
 1. Full Verification Pipeline Latency (/verify: LangGraph agent + web search + Google fact-check + neural ensemble).
-2. Neural Ensemble Latency (/predict: feature extraction + 5-model ensemble inference).
+2. Neural Ensemble Latency (/predict: feature extraction + calibrated neural ensemble inference).
 3. Warm vs Cold Start Latency Distributions (Min, Max, Mean, P50, P95 across 10+ samples).
 4. Persists real benchmark results to CSV and JSON history files.
 """

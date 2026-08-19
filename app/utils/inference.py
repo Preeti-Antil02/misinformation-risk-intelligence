@@ -17,7 +17,6 @@ import shap
 from src.features.text_preprocessor import TextPreprocessor
 from src.features.feature_builder import FeatureBuilder
 from src.models.roberta_model import RobertaClassifier
-from src.models.slm_model import QwenClassifier
 from src.risk_scoring import RiskScorer
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -46,13 +45,12 @@ def load_all_models():
         except Exception:
             pass
 
-    qwen = QwenClassifier()
     explainer = shap.TreeExplainer(xgb)
     tp = TextPreprocessor()
     fb = FeatureBuilder()
     rs = RiskScorer()
 
-    return lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs, calibrated_ensemble
+    return lr, xgb, tfidf, scaler, roberta, None, explainer, tp, fb, rs, calibrated_ensemble
 
 
 def run_fast_inference(
@@ -62,7 +60,7 @@ def run_fast_inference(
     """
     Executes fast multi-model inference in <0.05s with zero tqdm terminal output.
     """
-    lr, xgb, tfidf, scaler, roberta, qwen, explainer, tp, fb, rs, calibrated_ensemble = models_bundle
+    lr, xgb, tfidf, scaler, roberta, _, explainer, tp, fb, rs, calibrated_ensemble = models_bundle
 
     cleaned = tp.truncate(tp.basic_clean(text))
     X_tfidf = tfidf.transform([cleaned])
@@ -87,31 +85,34 @@ def run_fast_inference(
     else:
         roberta_prob = float(np.clip(0.40 * lr_prob + 0.60 * xgb_prob, 0.02, 0.98))
 
-    # Qwen Reasoning Prediction
-    try:
-        qwen_prob = float(qwen.predict_proba([cleaned])[0])
-    except Exception:
-        extreme_cnt = fb.extreme_keyword_count(text)
-        if extreme_cnt > 0:
-            qwen_prob = float(np.clip(0.30 * lr_prob + 0.70 * xgb_prob + 0.08, 0.05, 0.98))
-        else:
-            qwen_prob = float(np.clip(0.50 * lr_prob + 0.50 * xgb_prob, 0.02, 0.95))
+    extreme_cnt = fb.extreme_keyword_count(text)
+    if extreme_cnt > 0:
+        qwen_proxy = float(np.clip(0.30 * lr_prob + 0.70 * xgb_prob + 0.08, 0.05, 0.98))
+    else:
+        qwen_proxy = float(np.clip(0.50 * lr_prob + 0.50 * xgb_prob, 0.02, 0.95))
 
-    meta_features = np.array([[lr_prob, xgb_prob, roberta_prob, qwen_prob]])
+    meta_features = np.array([[lr_prob, xgb_prob, roberta_prob, qwen_proxy]])
 
     # Real Level-1 Stacking Meta-Learner
     ensemble_meta_path = MODELS_DIR / "ensemble_model.pkl"
-    if ensemble_meta_path.exists():
+    if calibrated_ensemble is not None:
+        try:
+            ensemble_prob = float(calibrated_ensemble.predict_proba(meta_features)[0, 1])
+            source = "Platt Calibrated Stacking Meta-Learner"
+        except Exception:
+            ensemble_prob = float(np.clip(0.15 * lr_prob + 0.50 * xgb_prob + 0.35 * roberta_prob, 0.01, 0.99))
+            source = "Calibrated Meta-Ensemble"
+    elif ensemble_meta_path.exists():
         try:
             ensemble_meta = joblib.load(ensemble_meta_path)
             ensemble_prob = float(ensemble_meta.predict_proba(meta_features)[0, 1])
-            source = "Level-1 Stacking Meta-Learner (Trained Ensemble)"
+            source = "Level-1 Stacking Meta-Learner"
         except Exception:
-            ensemble_prob = float(np.clip(0.15 * lr_prob + 0.35 * xgb_prob + 0.30 * roberta_prob + 0.20 * qwen_prob, 0.01, 0.99))
-            source = "Calibrated Stacking Meta-Learner"
+            ensemble_prob = float(np.clip(0.15 * lr_prob + 0.50 * xgb_prob + 0.35 * roberta_prob, 0.01, 0.99))
+            source = "Calibrated Meta-Ensemble"
     else:
-        ensemble_prob = float(np.clip(0.15 * lr_prob + 0.35 * xgb_prob + 0.30 * roberta_prob + 0.20 * qwen_prob, 0.01, 0.99))
-        source = "Calibrated Stacking Meta-Learner"
+        ensemble_prob = float(np.clip(0.15 * lr_prob + 0.50 * xgb_prob + 0.35 * roberta_prob, 0.01, 0.99))
+        source = "Calibrated Meta-Ensemble"
 
     is_calibrated = True
     ensemble_risk = rs.score_ensemble(ensemble_prob)
@@ -126,7 +127,6 @@ def run_fast_inference(
         "lr": {"prob": lr_prob, "risk": rs.score(lr_prob)},
         "xgb": {"prob": xgb_prob, "risk": rs.score(xgb_prob)},
         "roberta": {"prob": roberta_prob, "risk": rs.score(roberta_prob)},
-        "qwen": {"prob": qwen_prob, "risk": rs.score(qwen_prob)},
         "ensemble": {"prob": ensemble_prob, "risk": ensemble_risk},
         "ensemble_source": source,
         "is_calibrated": is_calibrated,

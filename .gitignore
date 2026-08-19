@@ -1,11 +1,10 @@
-<<<<<<< HEAD
 # Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 
-# Environments
+# Virtual Environments
 venv/
 env/
 .venv/
@@ -30,8 +29,12 @@ logs/
 scratch/
 tmp/
 
-# Data & Notebook checkpoints
+# Data & Large Artifacts
 data/
+*.npy
+*.safetensors
+*.bin
+models/bert_finetuned/
 notebooks/.ipynb_checkpoints/
 .ipynb_checkpoints/
 
@@ -44,23 +47,3 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-=======
-# Python
-__pycache__/
-*.pyc
-
-# Virtual env
-venv/
-env/
-
-# Data
-data/
-
-# Notebook checkpoints
-.ipynb_checkpoints/
-
-# OS
-.DS_Store
-
-notebooks/
->>>>>>> origin/main
