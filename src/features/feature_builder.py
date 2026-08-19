@@ -79,18 +79,54 @@ class FeatureBuilder:
         avg_len = sum(len(w) for w in words) / len(words)
         return float(min(10.0, max(3.0, avg_len)))
 
+    def extract_single_text_features(self, text: str) -> dict:
+        """Optimized single-pass feature extraction for low-latency real-time inference."""
+        s_text = str(text)
+        s_lower = s_text.lower()
+        all_words = s_text.split()
+        num_words = len(all_words)
+        
+        # 1. Exclamation count
+        excl_cnt = float(s_text.count("!"))
+        
+        # 2. Capital words & ratio (single regex pass)
+        words_caps = re.findall(r'\b[A-Z]{2,}\b', s_text)
+        sensational_caps = [w for w in words_caps if w.upper() not in self.COMMON_ACRONYMS]
+        cap_cnt = float(len(sensational_caps))
+        cap_ratio = float(min(1.0, cap_cnt / max(1, num_words))) if num_words > 0 else 0.0
+        
+        # 3. Extreme keywords count
+        extreme_cnt = float(sum(s_lower.count(word) for word in self.extreme_words))
+        
+        # 4. Sentiment & subjectivity (single TextBlob pass)
+        try:
+            blob_sentiment = TextBlob(s_text).sentiment
+            pol = float(blob_sentiment.polarity)
+            subj = float(blob_sentiment.subjectivity)
+        except Exception:
+            pol = 0.0
+            subj = 0.0
+            
+        # 5. Avg word length
+        if num_words == 0:
+            avg_len = 4.5
+        else:
+            avg_len = sum(len(w) for w in all_words) / num_words
+        avg_len_clamped = float(min(10.0, max(3.0, avg_len)))
+        
+        return {
+            "exclamation_count": excl_cnt,
+            "capital_word_count": cap_cnt,
+            "capital_ratio": cap_ratio,
+            "extreme_keyword_count": extreme_cnt,
+            "sentiment_polarity": pol,
+            "subjectivity": subj,
+            "avg_word_length": avg_len_clamped
+        }
+
     def build_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Builds and returns a DataFrame of the 7 linguistic manipulation features.
         """
-        features_df = pd.DataFrame(index=df.index)
-
-        features_df["exclamation_count"] = df["text"].apply(self.exclamation_count)
-        features_df["capital_word_count"] = df["text"].apply(self.capital_word_count)
-        features_df["capital_ratio"] = df["text"].apply(self.capital_ratio)
-        features_df["extreme_keyword_count"] = df["text"].apply(self.extreme_keyword_count)
-        features_df["sentiment_polarity"] = df["text"].apply(self.sentiment_polarity)
-        features_df["subjectivity"] = df["text"].apply(self.subjectivity)
-        features_df["avg_word_length"] = df["text"].apply(self.avg_word_length)
-
-        return features_df[self.feature_names]
+        rows = [self.extract_single_text_features(t) for t in df["text"]]
+        return pd.DataFrame(rows, index=df.index)[self.feature_names]

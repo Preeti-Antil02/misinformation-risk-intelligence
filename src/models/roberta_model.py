@@ -96,6 +96,23 @@ class RobertaClassifier:
     def predict_proba(self, texts, batch_size=64):
         self.model.eval()
 
+        # Fast-path for real-time inference (single text or small batches)
+        if len(texts) <= 4:
+            encodings = self.tokenizer(
+                texts,
+                truncation=True,
+                padding=True,
+                max_length=128,
+                return_tensors="pt",
+            )
+            with torch.no_grad():
+                input_ids = encodings["input_ids"].to(self.device)
+                attention_mask = encodings["attention_mask"].to(self.device)
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                probs = torch.softmax(outputs.logits, dim=1).cpu().numpy()
+            return probs[:, 1]
+
+        # Batch-path for bulk dataset evaluation
         encodings = self.tokenizer(
             texts,
             truncation=True,
@@ -112,7 +129,7 @@ class RobertaClassifier:
 
         probs = []
         with torch.no_grad():
-            for batch in tqdm(loader, desc="RoBERTa inference"):
+            for batch in loader:
                 input_ids      = batch[0].to(self.device)
                 attention_mask = batch[1].to(self.device)
                 outputs = self.model(
@@ -124,6 +141,7 @@ class RobertaClassifier:
 
         probs = np.array(probs)
         return probs[:, 1]          # probability of class 1 (fake)
+
 
     # --------------------------------------------------
     def predict(self, texts):

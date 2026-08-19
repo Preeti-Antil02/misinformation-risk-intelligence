@@ -163,37 +163,42 @@ def extract_text_from_image(image_path: Union[str, Path]) -> Dict[str, Any]:
     best_conf = 0.0
     engine = "None"
 
-    # 1. Primary: EasyOCR
-    reader = get_easyocr_reader()
-    if reader:
+    # 1. Fast Primary: Tesseract C++ Engine (50-150ms on CPU)
+    if HAS_PYTESSERACT:
         try:
-            # First pass: preprocessed image
-            results = reader.readtext(cleaned_np, detail=1)
-            # Second pass: raw image fallback if first pass is empty
-            if not results:
-                results = reader.readtext(str(image_path), detail=1)
-
-            if results:
-                texts = [r[1] for r in results if r[1].strip()]
-                confs = [r[2] for r in results if len(r) > 2 and r[2] is not None]
-                best_text = " ".join(texts).strip()
-                best_conf = float(np.mean(confs)) if confs else 0.8
-                engine = "EasyOCR"
-                logger.info(f"EasyOCR success (conf: {best_conf:.2f}, words: {len(texts)})")
-        except Exception as e:
-            logger.warning(f"EasyOCR engine failed, falling back: {str(e)}")
-
-    # 2. Fallback: Tesseract (if primary failed or returned nothing)
-    if not best_text and HAS_PYTESSERACT:
-        try:
-            logger.info("Executing Tesseract fallback...")
-            best_text = pytesseract.image_to_string(cleaned_pil).strip()
+            best_text = pytesseract.image_to_string(cleaned_pil, lang="eng+hin").strip()
             if not best_text:
-                best_text = pytesseract.image_to_string(str(image_path)).strip()
-            best_conf = 0.7 if best_text else 0.0
-            engine = "Tesseract"
+                best_text = pytesseract.image_to_string(str(image_path), lang="eng+hin").strip()
+            if len(best_text.split()) >= 2:
+                best_conf = 0.90
+                engine = "Tesseract"
+                logger.info(f"Tesseract C++ fast OCR success (words: {len(best_text.split())})")
+            else:
+                best_text = "" # Trigger neural fallback for noisy/stylized text
         except Exception as e:
-            logger.error(f"Tesseract fallback failed: {str(e)}")
+            logger.debug(f"Tesseract engine skipped/failed, trying EasyOCR fallback: {str(e)}")
+
+    # 2. Deep Neural Fallback: EasyOCR (PyTorch CRAFT + BiLSTM)
+    if not best_text and HAS_EASYOCR:
+        reader = get_easyocr_reader()
+        if reader:
+            try:
+                # First pass: preprocessed image
+                results = reader.readtext(cleaned_np, detail=1, paragraph=True)
+                # Second pass: raw image fallback if first pass is empty
+                if not results:
+                    results = reader.readtext(str(image_path), detail=1, paragraph=True)
+
+                if results:
+                    texts = [r[1] for r in results if r[1].strip()]
+                    confs = [r[2] for r in results if len(r) > 2 and r[2] is not None]
+                    best_text = " ".join(texts).strip()
+                    best_conf = float(np.mean(confs)) if confs else 0.85
+                    engine = "EasyOCR"
+                    logger.info(f"EasyOCR neural fallback success (conf: {best_conf:.2f}, words: {len(texts)})")
+            except Exception as e:
+                logger.warning(f"EasyOCR engine failed: {str(e)}")
+
 
     # Choice & Clean
     clean_text = best_text.strip()

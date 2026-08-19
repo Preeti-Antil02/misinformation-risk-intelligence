@@ -30,12 +30,19 @@ if str(BASE_DIR) not in sys.path:
 import joblib
 import pandas as pd
 import numpy as np
+import psutil
+import torch
+
+# Optimize PyTorch CPU inference on 2-vCPU hardware
+torch.set_num_threads(2)
+
 from scipy.sparse import hstack, csr_matrix
-from fastapi import FastAPI, HTTPException, Request, Response, Depends, Security
+from fastapi import FastAPI, HTTPException, Request, Response, Depends, Security, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security.api_key import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+
 
 # Try importing APScheduler
 try:
@@ -373,6 +380,23 @@ def health():
         "sentry": bool(os.getenv("SENTRY_DSN"))
     }
 
+    # 7. System Resource Utilization
+    try:
+        proc = psutil.Process()
+        vmem = psutil.virtual_memory()
+        checks["system_resources"] = {
+            "status": "ok",
+            "cpu_percent": psutil.cpu_percent(interval=None),
+            "process_memory_rss_mb": round(proc.memory_info().rss / (1024 * 1024), 1),
+            "system_memory_total_mb": round(vmem.total / (1024 * 1024), 1),
+            "system_memory_used_mb": round(vmem.used / (1024 * 1024), 1),
+            "system_memory_available_mb": round(vmem.available / (1024 * 1024), 1),
+            "memory_usage_pct": vmem.percent,
+            "process_threads": proc.num_threads()
+        }
+    except Exception as e:
+        checks["system_resources"] = {"status": "warning", "error": str(e)}
+
     total_latency_ms = round((time.time() - check_start) * 1000, 2)
     payload = {
         "status": "healthy" if is_healthy else "unhealthy",
@@ -406,17 +430,31 @@ class EnsembleResult(BaseModel):
     is_calibrated: bool
 
 
+class TimingBreakdown(BaseModel):
+    text_cleaning_ms: float
+    tfidf_transform_ms: float
+    feature_builder_ms: float
+    scaler_transform_ms: float
+    logistic_regression_ms: float
+    xgboost_ms: float
+    roberta_ms: float
+    meta_calibration_ms: float
+    total_server_execution_ms: float
+
+
 class PredictResponse(BaseModel):
     input_text: str
     ensemble: EnsembleResult
     roberta: ModelResult
     xgboost: ModelResult
     logistic_regression: ModelResult
+    timing_breakdown: Optional[TimingBreakdown] = None
+
 
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(request: PredictRequest):
-    start_ts = time.time()
+    start_ts = time.perf_counter()
     text = request.text.strip()
 
     if len(text.split()) < 3:
@@ -427,20 +465,37 @@ def predict(request: PredictRequest):
 
     try:
         # 1. Feature Extraction
+        t_clean_start = time.perf_counter()
         cleaned = tp.basic_clean(text)
         cleaned = tp.truncate(cleaned)
+        t_clean_ms = (time.perf_counter() - t_clean_start) * 1000
 
+        t_tfidf_start = time.perf_counter()
         X_tfidf = tfidf.transform([cleaned])
+        t_tfidf_ms = (time.perf_counter() - t_tfidf_start) * 1000
 
+        t_fb_start = time.perf_counter()
         temp_df = pd.DataFrame({"text": [text]})
         X_num = fb.build_features(temp_df).astype(np.float64)
+        t_fb_ms = (time.perf_counter() - t_fb_start) * 1000
+
+        t_scale_start = time.perf_counter()
         X_num_scaled = scaler.transform(X_num)
         X_combined = hstack([X_tfidf, csr_matrix(X_num_scaled)])
+        t_scale_ms = (time.perf_counter() - t_scale_start) * 1000
 
         # 2. Model Inferences
-        lr_prob      = float(lr.predict_proba(X_tfidf)[0, 1])
-        xgb_prob     = float(xgb.predict_proba(X_combined)[0, 1])
+        t_lr_start = time.perf_counter()
+        lr_prob = float(lr.predict_proba(X_tfidf)[0, 1])
+        t_lr_ms = (time.perf_counter() - t_lr_start) * 1000
+
+        t_xgb_start = time.perf_counter()
+        xgb_prob = float(xgb.predict_proba(X_combined)[0, 1])
+        t_xgb_ms = (time.perf_counter() - t_xgb_start) * 1000
+
+        t_roberta_start = time.perf_counter()
         roberta_prob = float(roberta.predict_proba([cleaned])[0])
+        t_roberta_ms = (time.perf_counter() - t_roberta_start) * 1000
 
         extreme_cnt = fb.extreme_keyword_count(text)
         if extreme_cnt > 0:
@@ -451,6 +506,7 @@ def predict(request: PredictRequest):
         meta_features = np.array([[lr_prob, xgb_prob, roberta_prob, qwen_proxy]])
 
         # 3. Calibrated Ensemble
+        t_meta_start = time.perf_counter()
         is_calibrated = False
         fallback_type = "none"
         if calibrated_model is not None:
@@ -464,16 +520,29 @@ def predict(request: PredictRequest):
             ensemble_prob = (lr_prob * 0.15) + (xgb_prob * 0.50) + (roberta_prob * 0.35)
             ensemble_source = "Weighted Ensemble Fallback"
             fallback_type = "model_weighted_fallback"
+        t_meta_ms = (time.perf_counter() - t_meta_start) * 1000
 
         ensemble_risk = rs.score_ensemble(ensemble_prob)
 
-        elapsed_ms = (time.time() - start_ts) * 1000
+        total_exec_ms = (time.perf_counter() - start_ts) * 1000
         log_operational_event(
             event_type="verify_request",
-            latency_ms=elapsed_ms,
+            latency_ms=total_exec_ms,
             status="success",
             fallback_type=fallback_type,
             details={"risk_level": ensemble_risk}
+        )
+
+        timing_data = TimingBreakdown(
+            text_cleaning_ms=round(t_clean_ms, 2),
+            tfidf_transform_ms=round(t_tfidf_ms, 2),
+            feature_builder_ms=round(t_fb_ms, 2),
+            scaler_transform_ms=round(t_scale_ms, 2),
+            logistic_regression_ms=round(t_lr_ms, 2),
+            xgboost_ms=round(t_xgb_ms, 2),
+            roberta_ms=round(t_roberta_ms, 2),
+            meta_calibration_ms=round(t_meta_ms, 2),
+            total_server_execution_ms=round(total_exec_ms, 2)
         )
 
         return PredictResponse(
@@ -496,7 +565,9 @@ def predict(request: PredictRequest):
                 probability_fake=round(lr_prob, 4),
                 risk_level=rs.score(lr_prob),
             ),
+            timing_breakdown=timing_data
         )
+
     except Exception as e:
         elapsed_ms = (time.time() - start_ts) * 1000
         logger.error(f"Prediction error: {str(e)}", exc_info=True)
@@ -583,9 +654,53 @@ def full_verify(request: VerifyRequest):
         raise HTTPException(status_code=500, detail=f"Full verification pipeline failed: {str(e)}")
 
 
+@app.post("/verify/image")
+async def verify_image_endpoint(file: UploadFile = File(...)):
+    """
+    Extracts text from uploaded screenshot (Tesseract fast C++ / EasyOCR fallback)
+    and executes the full agentic verification pipeline.
+    """
+    start_ts = time.perf_counter()
+    temp_dir = BASE_DIR / "scratch"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_file = temp_dir / f"upload_{int(time.time()*1000)}_{file.filename}"
+
+    try:
+        contents = await file.read()
+        temp_file.write_bytes(contents)
+
+        from risklens.ocr_pipeline import verify_image
+        result = verify_image(temp_file)
+        elapsed_ms = round((time.perf_counter() - start_ts) * 1000, 2)
+        result["latency_ms"] = elapsed_ms
+
+        log_operational_event(
+            event_type="image_verify_request",
+            latency_ms=elapsed_ms,
+            status="success",
+            details={"engine": result.get("ocr_extraction", {}).get("engine_used")}
+        )
+        return JSONResponse(status_code=200, content=result)
+    except Exception as e:
+        elapsed_ms = round((time.perf_counter() - start_ts) * 1000, 2)
+        logger.error(f"Image verification failed: {str(e)}", exc_info=True)
+        log_operational_event(
+            event_type="image_verify_request",
+            latency_ms=elapsed_ms,
+            status="error",
+            details={"error": str(e)}
+        )
+        raise HTTPException(status_code=500, detail=f"Image verification failed: {str(e)}")
+    finally:
+        if temp_file.exists():
+            try: temp_file.unlink()
+            except Exception: pass
+
+
 # -------------------------------------------------------
 # Telegram Webhook Receiver (Item 20-Bonus)
 # -------------------------------------------------------
+
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     """Secure Telegram Webhook receiver endpoint."""
