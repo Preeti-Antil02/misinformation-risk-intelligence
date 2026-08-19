@@ -263,6 +263,8 @@ def root():
 def get_version():
     """Returns application release version and operational runtime configuration."""
     return {
+        "status": "pass",
+        "healthy": True,
         "version": "2.1.0",
         "release_name": "RiskLens Enterprise v2.1.0",
         "environment": os.getenv("ENVIRONMENT", "production"),

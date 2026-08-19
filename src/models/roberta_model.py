@@ -138,7 +138,6 @@ class RobertaClassifier:
 
     # --------------------------------------------------
     def load(self, path="models/roberta_finetuned"):
-<<<<<<< HEAD
         """
         Loads fine-tuned weights and tokenizer from local path if available,
         otherwise falls back to pretrained roberta-base without failing.
@@ -158,11 +157,6 @@ class RobertaClassifier:
                 print(f"Could not load weights from {path} ({e}). Retaining roberta-base.")
         else:
             print(f"Notice: {path} not found. Operating with roberta-base pretrained checkpoint.")
-=======
-        self.tokenizer = RobertaTokenizer.from_pretrained(path)
-        self.model     = RobertaForSequenceClassification.from_pretrained(path)
-        self.model.to(self.device)
->>>>>>> origin/main
 
 
 # -------------------------------------------------------

@@ -158,21 +158,13 @@ class QwenClassifier:
                 prompt,
                 return_tensors="pt",
                 truncation=True,
-<<<<<<< HEAD
                 max_length=512,
-=======
-                max_length=1024,
->>>>>>> origin/main
             ).to(self.device)
 
             with torch.no_grad():
                 output_ids = self.model.generate(
                     **inputs,
-<<<<<<< HEAD
                     max_new_tokens=25,
-=======
-                    max_new_tokens=80,
->>>>>>> origin/main
                     do_sample=False,
                     temperature=1.0,
                     pad_token_id=self.tokenizer.eos_token_id,

@@ -228,3 +228,13 @@ def retrain_active_learning_model() -> Dict[str, Any]:
     res = engine.retrain_meta_learner()
     engine.generate_report(res)
     return res
+
+
+def evaluate_and_retrain() -> Dict[str, Any]:
+    """Wraps check_and_retrain from risklens.feedback for APScheduler."""
+    try:
+        from risklens.feedback import check_and_retrain
+        return check_and_retrain(min_samples=10, force=False)
+    except Exception as e:
+        return {"retrained": False, "error": str(e)}
+

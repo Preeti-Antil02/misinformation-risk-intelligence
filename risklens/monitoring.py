@@ -289,6 +289,9 @@ def get_operational_metrics(hours: int = 24) -> Dict[str, Any]:
         return default_res
 
 
+get_operational_summary = get_operational_metrics
+
+
 # ============================================================================
 # 3. MULTI-CHANNEL ALERT DISPATCHER
 # ============================================================================
@@ -526,6 +529,12 @@ def check_model_drift_and_alert(
     except Exception as e:
         logger.error(f"Drift monitoring check failed: {str(e)}")
         return {"checked": False, "error": str(e)}
+
+
+check_model_drift = check_model_drift_and_alert
+check_webhook_health = check_telegram_webhook_health
+init_sentry = init_error_tracking
+
 
 
 # Initialize databases and Sentry on import

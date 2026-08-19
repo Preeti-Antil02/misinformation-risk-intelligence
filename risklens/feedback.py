@@ -308,6 +308,25 @@ def calculate_live_accuracy() -> Dict[str, Any]:
         }
 
 
+def get_recent_feedback(limit: int = 20) -> List[Dict[str, Any]]:
+    """Fetches the most recent feedback entries with associated prediction metadata."""
+    try:
+        with DatabaseManager.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT f.id, p.text, p.risk_level as predicted_risk, f.user_feedback, f.correct_label, f.timestamp as created_at
+                FROM feedback f
+                JOIN predictions p ON f.prediction_id = p.id
+                ORDER BY f.id DESC
+                LIMIT ?
+            """, (limit,))
+            rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+    except Exception as e:
+        logger.error(f"Failed to fetch recent feedback: {e}")
+        return []
+
+
 def get_analytics_data() -> Dict[str, Any]:
     """Gathers comprehensive system telemetry with robust default fallbacks without exposing PII."""
     try:
