@@ -49,11 +49,12 @@ COPY models/ /app/models/
 COPY scripts/ /app/scripts/
 COPY api.py /app/api.py
 COPY app.py /app/app.py
+COPY entrypoint.py /app/entrypoint.py
 COPY entrypoint.sh /app/entrypoint.sh
 
 # Ensure persistent mount directories and executable permissions exist
 RUN mkdir -p /app/databases /app/logs /app/scratch /app/results /data && \
-    chmod +x /app/entrypoint.sh
+    chmod +x /app/entrypoint.sh /app/entrypoint.py
 
 # Expose Hugging Face Space default port
 EXPOSE 7860
@@ -62,4 +63,4 @@ EXPOSE 7860
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:7860/health || exit 1
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["python", "/app/entrypoint.py"]
