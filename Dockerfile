@@ -11,8 +11,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     PORT=7860 \
     DATABASE_DIR=/app/databases \
-    TRANSFORMERS_CACHE=/tmp/hf_cache \
-    HF_HOME=/tmp/hf_cache
+    TRANSFORMERS_CACHE=/root/.cache/huggingface/hub \
+    HF_HOME=/root/.cache/huggingface/hub
 
 WORKDIR /app
 
@@ -34,6 +34,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     python -m spacy download en_core_web_sm || true
+
+# Pre-cache base transformer weights during build so runtime startup is instant
+RUN python -c "from transformers import RobertaTokenizer, RobertaForSequenceClassification; RobertaTokenizer.from_pretrained('roberta-base'); RobertaForSequenceClassification.from_pretrained('roberta-base', num_labels=2)"
 
 # Copy Nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

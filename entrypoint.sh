@@ -44,9 +44,20 @@ trap cleanup SIGTERM SIGINT
 echo "🚀 Launching FastAPI Backend on 127.0.0.1:8000..."
 python3 -m uvicorn api:app --host 127.0.0.1 --port 8000 --workers 1 --log-level info &
 API_PID=$!
-echo "✓ FastAPI Backend started (PID: $API_PID)"
+echo "✓ FastAPI Backend process launched (PID: $API_PID)"
 
-# 2. Start Streamlit Dashboard in background on 127.0.0.1:8501
+# 2. Wait for FastAPI backend to initialize and respond healthy
+echo "⏳ Waiting for FastAPI Backend to become ready on 127.0.0.1:8000..."
+for i in $(seq 1 45); do
+    if curl -s -f http://127.0.0.1:8000/health >/dev/null 2>&1; then
+        echo "✅ FastAPI Backend is ready and responding healthy!"
+        break
+    fi
+    echo "Waiting for FastAPI backend startup ($i/45)..."
+    sleep 2
+done
+
+# 3. Start Streamlit Dashboard in background on 127.0.0.1:8501
 echo "🌐 Launching Streamlit Dashboard on 127.0.0.1:8501..."
 python3 -m streamlit run app.py \
     --server.port=8501 \
@@ -58,7 +69,7 @@ python3 -m streamlit run app.py \
 STREAMLIT_PID=$!
 echo "✓ Streamlit Dashboard started (PID: $STREAMLIT_PID)"
 
-# 3. Start Telegram Bot in background (if configured)
+# 4. Start Telegram Bot in background (if configured)
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
     echo "🤖 Launching Telegram Bot in polling mode..."
     python3 risklens/telegram_bot.py &
@@ -68,16 +79,7 @@ else
     echo "ℹ️ TELEGRAM_BOT_TOKEN not set. Telegram bot worker skipped."
 fi
 
-# 4. Wait for FastAPI backend to become ready before launching Nginx
-echo "⏳ Waiting for FastAPI Backend to initialize on 127.0.0.1:8000..."
-for i in $(seq 1 30); do
-    if curl -s -f http://127.0.0.1:8000/health >/dev/null 2>&1; then
-        echo "✅ FastAPI Backend is active and healthy!"
-        break
-    fi
-    echo "Waiting for FastAPI... ($i/30)"
-    sleep 2
-done
+sleep 2
 
 # 5. Start Nginx Reverse Proxy in foreground on port 7860
 echo "⚡ Launching Nginx Reverse Proxy on port 7860..."
