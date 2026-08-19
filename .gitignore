@@ -1,17 +1,45 @@
-# Python
+# Python bytecode & cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
 
-# Virtual env
+# Environments
 venv/
 env/
+.venv/
+ENV/
 
-# Data
+# Secrets & Environment Variables
+.env
+*.env
+!.env.example
+.env.*.local
+
+# Databases & Runtime State
+*.db
+*.sqlite
+*.sqlite3
+databases/*.db
+usage.db
+
+# Logs & Temporary Files
+logs/
+*.log
+scratch/
+tmp/
+
+# Data & Notebook checkpoints
 data/
-models/
-
-# Notebook checkpoints
+notebooks/.ipynb_checkpoints/
 .ipynb_checkpoints/
 
-# OS
+# OS Specific
 .DS_Store
+Thumbs.db
+
+# IDE & Editor Configs
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,33 @@
+name: Sync GitHub to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync-to-space:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::HF_TOKEN secret is not set in GitHub repository secrets. Please configure HF_TOKEN with a Hugging Face write access token."
+            exit 1
+          fi
+          
+          # Configure git identity for the sync commit/push
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions Sync"
+          
+          # Force push current main branch to Hugging Face Space repo to resolve any history divergence
+          git push --force https://Preeti-Antil:$HF_TOKEN@huggingface.co/spaces/Preeti-Antil/RiskLens main:main

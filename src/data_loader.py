@@ -71,25 +71,24 @@ class DataLoader:
 
         return df[["text", "label", "source_dataset"]]
 
-    def load_combined(self):
+    def load_combined(self, sample_welfake=True):
 
-        isot_df = self.load_isot()
+        isot_df    = self.load_isot()
         welfake_df = self.load_welfake()
+
+        if sample_welfake:
+            welfake_df = welfake_df.sample(
+                n=min(len(isot_df), len(welfake_df)),
+                random_state=42
+            )
+
+        df = pd.concat([isot_df, welfake_df], ignore_index=True)
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
 
         print(f"ISOT:    {len(isot_df)} samples")
         print(f"WELFake: {len(welfake_df)} samples")
-
-        # Sample WELFake to match ISOT size — prevents domination
-        welfake_sample = welfake_df.sample(
-            n=min(len(isot_df), len(welfake_df)),
-            random_state=42
-        )
-
-        df = pd.concat([isot_df, welfake_sample], ignore_index=True)
-        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
-
         print(f"Combined: {len(df)} samples")
-        print(f"Label distribution:\n{df['label'].value_counts()}")
+        print(df["label"].value_counts())
 
         return df[["text", "label", "source_dataset"]]
 

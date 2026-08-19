@@ -1,0 +1,2 @@
+timestamp,endpoint,test_type,sample_count,min_sec,mean_sec,p50_sec,p95_sec,max_sec,space_stage
+2026-08-19 09:15:32 UTC,verify,WARM_INFERENCE,10,0.33,0.683,0.49,1.731,2.574,RUNNING

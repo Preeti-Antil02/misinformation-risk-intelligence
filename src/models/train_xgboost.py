@@ -13,7 +13,7 @@ from src.features.feature_builder import FeatureBuilder
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import RandomizedSearchCV
-
+from scipy.sparse import csr_matrix
 from scipy.sparse import hstack
 
 from xgboost import XGBClassifier
@@ -121,18 +121,17 @@ def main():
     X_train_numeric = fb.build_features(train_df)
     X_test_numeric = fb.build_features(test_df)
 
-    scaler = StandardScaler(with_mean=False)
-
-    X_train_numeric = scaler.fit_transform(X_train_numeric)
-    X_test_numeric = scaler.transform(X_test_numeric)
+    scaler = StandardScaler()
+    X_train_numeric_scaled = scaler.fit_transform(X_train_numeric.values)
+    X_test_numeric_scaled = scaler.transform(X_test_numeric.values)
 
     # ---------------------------
     # Combine features
     # ---------------------------
     print("Combining TF-IDF and manipulation features...")
 
-    X_train_combined = hstack([X_train_tfidf, X_train_numeric])
-    X_test_combined = hstack([X_test_tfidf, X_test_numeric])
+    X_train_combined = hstack([X_train_tfidf, csr_matrix(X_train_numeric_scaled)])
+    X_test_combined  = hstack([X_test_tfidf,  csr_matrix(X_test_numeric_scaled)])
 
     print("Training shape:", X_train_combined.shape)
 

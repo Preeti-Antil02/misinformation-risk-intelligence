@@ -1,0 +1,32 @@
+name: Scheduled Space Wake & Retraining Trigger
+
+on:
+  schedule:
+    # Runs every day at 02:00 UTC (9:00 PM EST / 7:30 AM IST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  wake-and-retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Keepalive / Health Probe to Space
+        run: |
+          SPACE_URL="https://preeti-antil-risklens.hf.space"
+          echo "Sending keepalive health probe to $SPACE_URL/health..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$SPACE_URL/health" || echo "000")
+          echo "Space Health Probe Response Status: $HTTP_STATUS"
+
+      - name: Trigger Monitored Active Learning Retraining
+        env:
+          RISKLENS_API_KEY: ${{ secrets.RISKLENS_API_KEY }}
+        run: |
+          SPACE_URL="https://preeti-antil-risklens.hf.space"
+          echo "Triggering active learning queue inspection..."
+          
+          # Call analytics endpoint with API key to trigger continuous learning evaluation
+          if [ -n "$RISKLENS_API_KEY" ]; then
+            curl -s -X GET "$SPACE_URL/analytics" \
+              -H "X-API-Key: $RISKLENS_API_KEY" || true
+          fi
+          echo "Scheduled daily trigger finished successfully."

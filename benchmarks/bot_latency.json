@@ -1,0 +1,27 @@
+[
+  {
+    "timestamp": "2026-08-19 09:15:32 UTC",
+    "endpoint": "verify",
+    "test_type": "WARM_INFERENCE",
+    "sample_count": 10,
+    "success_rate_pct": 100.0,
+    "min_sec": 0.33,
+    "mean_sec": 0.683,
+    "p50_sec": 0.49,
+    "p95_sec": 1.731,
+    "max_sec": 2.574,
+    "space_stage": "RUNNING",
+    "raw_latencies": [
+      2.574,
+      0.7,
+      0.485,
+      0.33,
+      0.545,
+      0.365,
+      0.579,
+      0.496,
+      0.406,
+      0.352
+    ]
+  }
+]
