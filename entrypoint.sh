@@ -1,16 +1,14 @@
 #!/bin/bash
 # ============================================================================
-# RiskLens v2.1.0 Multi-Process Entrypoint for Hugging Face Spaces
-# Manages:
-# 1. FastAPI Backend (127.0.0.1:8000)
-# 2. Streamlit Dashboard (127.0.0.1:8501)
-# 3. Telegram Bot Worker (Background)
-# 4. Nginx Reverse Proxy (0.0.0.0:7860 - Foreground)
+# RiskLens v2.1.0 Enterprise Unified Container Entrypoint
+# 1. Streamlit Dashboard (127.0.0.1:8501 - Internal)
+# 2. Telegram Bot Polling Worker (Background)
+# 3. FastAPI Gateway & AI Engine (0.0.0.0:7860 - Foreground on Space Port)
 # ============================================================================
 
 set -e
 
-echo "🛡️ Starting RiskLens v2.1.0 Enterprise System on Hugging Face Spaces..."
+echo "🛡️ Starting RiskLens v2.1.0 Enterprise Container..."
 
 # Determine persistent database directory
 if [ -d "/data" ]; then
@@ -26,9 +24,6 @@ mkdir -p "$DATABASE_DIR" /app/logs /app/scratch /app/results
 # Graceful termination handler
 cleanup() {
     echo "🛑 Received termination signal. Shutting down RiskLens child processes..."
-    if [ -n "$API_PID" ] && kill -0 "$API_PID" 2>/dev/null; then
-        kill -TERM "$API_PID" || true
-    fi
     if [ -n "$STREAMLIT_PID" ] && kill -0 "$STREAMLIT_PID" 2>/dev/null; then
         kill -TERM "$STREAMLIT_PID" || true
     fi
@@ -40,26 +35,9 @@ cleanup() {
 
 trap cleanup SIGTERM SIGINT
 
-# 1. Start FastAPI Backend in background on 127.0.0.1:8000
-echo "🚀 Launching FastAPI Backend on 127.0.0.1:8000..."
-python3 -m uvicorn api:app --host 127.0.0.1 --port 8000 --workers 1 --log-level info &
-API_PID=$!
-echo "✓ FastAPI Backend process launched (PID: $API_PID)"
-
-# 2. Wait for FastAPI backend to initialize and respond healthy
-echo "⏳ Waiting for FastAPI Backend to become ready on 127.0.0.1:8000..."
-for i in $(seq 1 45); do
-    if curl -s -f http://127.0.0.1:8000/health >/dev/null 2>&1; then
-        echo "✅ FastAPI Backend is ready and responding healthy!"
-        break
-    fi
-    echo "Waiting for FastAPI backend startup ($i/45)..."
-    sleep 2
-done
-
-# 3. Start Streamlit Dashboard in background on 127.0.0.1:8501
-echo "🌐 Launching Streamlit Dashboard on 127.0.0.1:8501..."
-python3 -m streamlit run app.py \
+# 1. Start Streamlit Dashboard in background on port 8501
+echo "🌐 [1/3] Launching Streamlit Dashboard on 127.0.0.1:8501..."
+streamlit run app.py \
     --server.port=8501 \
     --server.address=127.0.0.1 \
     --server.headless=true \
@@ -69,18 +47,17 @@ python3 -m streamlit run app.py \
 STREAMLIT_PID=$!
 echo "✓ Streamlit Dashboard started (PID: $STREAMLIT_PID)"
 
-# 4. Start Telegram Bot in background (if configured)
+# 2. Start Telegram Bot in background (if configured)
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-    echo "🤖 Launching Telegram Bot in polling mode..."
-    python3 risklens/telegram_bot.py &
+    echo "🤖 [2/3] Launching Telegram Bot in polling mode..."
+    python risklens/telegram_bot.py &
     BOT_PID=$!
     echo "✓ Telegram Bot started (PID: $BOT_PID)"
 else
-    echo "ℹ️ TELEGRAM_BOT_TOKEN not set. Telegram bot worker skipped."
+    echo "ℹ️ [2/3] TELEGRAM_BOT_TOKEN not configured. Telegram bot worker skipped."
 fi
 
-sleep 2
-
-# 5. Start Nginx Reverse Proxy in foreground on port 7860
-echo "⚡ Launching Nginx Reverse Proxy on port 7860..."
-exec nginx -g "daemon off;"
+# 3. Start FastAPI Enterprise Gateway in foreground on Space port 7860
+PORT="${PORT:-7860}"
+echo "🚀 [3/3] Launching FastAPI Enterprise Gateway on port $PORT..."
+exec uvicorn api:app --host 0.0.0.0 --port "$PORT" --workers 1 --log-level info

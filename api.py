@@ -691,3 +691,89 @@ def get_analytics_dashboard(api_key: str = Depends(get_api_key)):
     </html>
     """
     return HTMLResponse(content=html)
+
+
+# ---------------------------------------------------------------------------
+# Streamlit Interactive Dashboard Gateway & Reverse Proxy
+# ---------------------------------------------------------------------------
+import httpx
+import websockets
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
+from starlette.background import BackgroundTask
+from starlette.responses import StreamingResponse
+
+STREAMLIT_HOST = os.getenv("STREAMLIT_HOST", "127.0.0.1")
+STREAMLIT_PORT = int(os.getenv("STREAMLIT_PORT", "8501"))
+STREAMLIT_URL = f"http://{STREAMLIT_HOST}:{STREAMLIT_PORT}"
+STREAMLIT_WS_URL = f"ws://{STREAMLIT_HOST}:{STREAMLIT_PORT}"
+
+http_client = httpx.AsyncClient(base_url=STREAMLIT_URL, timeout=120.0)
+
+@app.websocket("/_stcore/stream")
+@app.websocket("/_stcore/stream/{path:path}")
+async def streamlit_ws_proxy(websocket: WebSocket, path: str = ""):
+    """Bi-directional WebSocket bridge to internal Streamlit instance."""
+    await websocket.accept()
+    target_ws = f"{STREAMLIT_WS_URL}/_stcore/stream/{path}" if path else f"{STREAMLIT_WS_URL}/_stcore/stream"
+    try:
+        async with websockets.connect(target_ws, max_size=50 * 1024 * 1024) as server_ws:
+            async def forward_client():
+                try:
+                    while True:
+                        msg = await websocket.receive()
+                        if "bytes" in msg and msg["bytes"]:
+                            await server_ws.send(msg["bytes"])
+                        elif "text" in msg and msg["text"]:
+                            await server_ws.send(msg["text"])
+                except Exception:
+                    pass
+
+            async def forward_server():
+                try:
+                    while True:
+                        data = await server_ws.recv()
+                        if isinstance(data, bytes):
+                            await websocket.send_bytes(data)
+                        else:
+                            await websocket.send_text(data)
+                except Exception:
+                    pass
+
+            await asyncio.gather(forward_client(), forward_server(), return_exceptions=True)
+    except (WebSocketDisconnect, Exception) as e:
+        logger.debug(f"Streamlit WebSocket proxy closed: {e}")
+
+
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
+async def streamlit_http_proxy(request: Request, full_path: str):
+    """Catch-all proxy routing UI traffic, static assets, and health to internal Streamlit."""
+    url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8") if request.url.query else None)
+    try:
+        excluded_headers = {"host", "content-length", "connection", "upgrade"}
+        headers = [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in excluded_headers]
+        
+        req = http_client.build_request(
+            request.method,
+            url,
+            headers=headers,
+            content=request.stream()
+        )
+        resp = await http_client.send(req, stream=True)
+        return StreamingResponse(
+            resp.aiter_raw(),
+            status_code=resp.status_code,
+            headers={k: v for k, v in resp.headers.items() if k.lower() not in ("content-length", "connection", "transfer-encoding")},
+            background=BackgroundTask(resp.aclose)
+        )
+    except Exception as e:
+        return HTMLResponse(
+            f"<html><head><meta http-equiv='refresh' content='2'><title>RiskLens Initializing...</title></head>"
+            f"<body style='background:#0B0E17;color:#F8FAFC;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'>"
+            f"<div style='text-align:center;padding:2rem;background:#14182A;border-radius:12px;border:1px solid #2E3856;'>"
+            f"<h2 style='color:#818CF8;'>🛡️ RiskLens Enterprise Initializing</h2>"
+            f"<p style='color:#94A3B8;'>Streamlit dashboard is starting up on CPU basic hardware... (Auto-refreshing)</p>"
+            f"</div></body></html>",
+            status_code=503
+        )
+
