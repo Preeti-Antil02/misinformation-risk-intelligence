@@ -43,7 +43,6 @@ from fastapi.security.api_key import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-
 # Try importing APScheduler
 try:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -811,101 +810,23 @@ def get_analytics_dashboard(api_key: str = Depends(get_api_key)):
 
 
 # ---------------------------------------------------------------------------
-# Streamlit Interactive Dashboard Gateway & Reverse Proxy
+# API Root Info Endpoint (served at / via nginx when accessed as /api,
+# and also at / for direct FastAPI health checks)
 # ---------------------------------------------------------------------------
-import httpx
-import websockets
-import asyncio
-from fastapi import WebSocket, WebSocketDisconnect
-from starlette.background import BackgroundTask
-from starlette.responses import StreamingResponse
-
-STREAMLIT_HOST = os.getenv("STREAMLIT_HOST", "127.0.0.1")
-STREAMLIT_PORT = int(os.getenv("STREAMLIT_PORT", "8501"))
-STREAMLIT_URL = f"http://{STREAMLIT_HOST}:{STREAMLIT_PORT}"
-STREAMLIT_WS_URL = f"ws://{STREAMLIT_HOST}:{STREAMLIT_PORT}"
-
-http_client = httpx.AsyncClient(base_url=STREAMLIT_URL, timeout=120.0)
-
-@app.websocket("/_stcore/stream")
-@app.websocket("/_stcore/stream/{path:path}")
-@app.websocket("/stream")
-async def streamlit_ws_proxy(websocket: WebSocket, path: str = ""):
-    """Bi-directional WebSocket bridge to internal Streamlit instance."""
-    await websocket.accept()
-    target_ws = f"{STREAMLIT_WS_URL}/_stcore/stream/{path}" if path else f"{STREAMLIT_WS_URL}/_stcore/stream"
-    try:
-        async with websockets.connect(target_ws, max_size=50 * 1024 * 1024) as server_ws:
-            async def forward_client():
-                try:
-                    while True:
-                        msg = await websocket.receive()
-                        if "bytes" in msg and msg["bytes"]:
-                            await server_ws.send(msg["bytes"])
-                        elif "text" in msg and msg["text"]:
-                            await server_ws.send(msg["text"])
-                except Exception:
-                    pass
-
-            async def forward_server():
-                try:
-                    while True:
-                        data = await server_ws.recv()
-                        if isinstance(data, bytes):
-                            await websocket.send_bytes(data)
-                        else:
-                            await websocket.send_text(data)
-                except Exception:
-                    pass
-
-            await asyncio.gather(forward_client(), forward_server(), return_exceptions=True)
-    except (WebSocketDisconnect, Exception) as e:
-        logger.debug(f"Streamlit WebSocket proxy closed: {e}")
+@app.get("/")
+@app.get("/api")
+@app.get("/api/info")
+def api_root():
+    """System information and endpoint discovery."""
+    return {
+        "system":    "RiskLens Misinformation Risk Intelligence System",
+        "version":   "2.1.0",
+        "status":    "operational",
+        "models":    ["Stacking Ensemble (Platt Calibrated)", "RoBERTa", "XGBoost", "Logistic Regression", "MuRIL (Indic Multilingual)"],
+        "offline_models": ["Qwen2.5-3B-Instruct (GPU Batch Evaluation Only)"],
+        "endpoints": ["/verify", "/predict", "/telegram/webhook", "/analytics", "/analytics/dashboard", "/operations/metrics", "/health", "/version", "/docs"],
+    }
 
 
-@app.api_route("/", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
-@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
-async def streamlit_http_proxy(request: Request, full_path: str = ""):
-    """Catch-all proxy routing UI traffic, static assets, and health to internal Streamlit."""
-
-    url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8") if request.url.query else None)
-    try:
-        excluded_headers = {"host", "content-length", "connection", "upgrade"}
-        headers = [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in excluded_headers]
-        
-        body = await request.body() if request.method not in ("GET", "HEAD", "OPTIONS") else None
-        
-        req = http_client.build_request(
-            request.method,
-            url,
-            headers=headers,
-            content=body
-        )
-        resp = await http_client.send(req, stream=True)
-        return StreamingResponse(
-            resp.aiter_raw(),
-            status_code=resp.status_code,
-            headers={k: v for k, v in resp.headers.items() if k.lower() not in ("content-length", "connection", "transfer-encoding")},
-            background=BackgroundTask(resp.aclose)
-        )
-    except Exception as e:
-        logger.debug(f"Streamlit HTTP proxy fallback ({full_path}): {e}")
-        return HTMLResponse(
-            f"<!DOCTYPE html><html><head><meta http-equiv='refresh' content='3'><title>RiskLens Enterprise Portal</title>"
-            f"<style>body{{margin:0;padding:0;background:#0B0E17;color:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;}}"
-            f".card{{text-align:center;padding:2.5rem;background:#14182A;border-radius:16px;border:1px solid #2E3856;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);max-width:520px;}}"
-            f"h1{{color:#818CF8;font-size:1.6rem;margin-top:0;}}p{{color:#94A3B8;font-size:0.95rem;line-height:1.5;}}"
-            f".spinner{{border:3px solid rgba(255,255,255,0.1);border-top:3px solid #818CF8;border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;margin:1.5rem auto 1rem;}}"
-            f"@keyframes spin{{0%{{transform:rotate(0deg);}}100%{{transform:rotate(360deg);}}}}"
-            f".links{{margin-top:1.5rem;display:flex;gap:1rem;justify-content:center;}}"
-            f".links a{{color:#38BDF8;text-decoration:none;font-weight:600;font-size:0.9rem;padding:6px 12px;background:#1E293B;border-radius:6px;border:1px solid #334155;}}"
-            f"</style></head><body><div class='card'>"
-            f"<h1>🛡️ RiskLens Enterprise Intelligence</h1>"
-            f"<div class='spinner'></div>"
-            f"<p>The Streamlit UI and ensemble models are initializing on free-tier CPU hardware.<br>This page will automatically refresh once ready.</p>"
-            f"<div class='links'><a href='/health'>🏥 System Health</a><a href='/docs'>📖 API Docs</a><a href='/version'>🏷️ Release Info</a></div>"
-            f"</div></body></html>",
-            status_code=200
-        )
 
 

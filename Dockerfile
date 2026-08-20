@@ -18,17 +18,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system libraries, build tools, and Tesseract OCR with English and Hindi packs
+# Install system libraries, build tools, Tesseract OCR, and nginx reverse proxy
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     git \
     libgl1 \
     libglib2.0-0 \
+    nginx \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-hin \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Upgrade pip and install Python dependencies
 COPY requirements.txt .
@@ -48,12 +50,14 @@ COPY scripts/ /app/scripts/
 COPY api.py /app/api.py
 COPY app.py /app/app.py
 COPY entrypoint.sh /app/entrypoint.sh
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Ensure persistent mount directories exist, sanitize Windows CRLF endings, and grant universal permissions
-RUN mkdir -p /app/databases /app/logs /app/scratch /app/results /data /tmp/hf_cache /tmp/databases /tmp/logs && \
+RUN mkdir -p /app/databases /app/logs /app/scratch /app/results /data /tmp/hf_cache /tmp/databases /tmp/logs /var/log/nginx /var/lib/nginx/body /run/nginx && \
     sed -i 's/\r$//' /app/entrypoint.sh && \
-    chmod -R 777 /app /tmp /data 2>/dev/null || true && \
+    chmod -R 777 /app /tmp /data /var/log/nginx /var/lib/nginx /run/nginx 2>/dev/null || true && \
     chmod +x /app/entrypoint.sh
+
 
 # Expose Hugging Face Space default port
 EXPOSE 7860
