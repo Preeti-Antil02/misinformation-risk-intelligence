@@ -26,7 +26,10 @@ python -m streamlit run app.py \
     --server.headless=true \
     --server.enableCORS=false \
     --server.enableXsrfProtection=false \
+    --server.enableWebsocketCompression=false \
+    --browser.gatherUsageStats=false \
     --server.fileWatcherType=none &
+
 
 # 2. Start Telegram Bot in background (if configured)
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then

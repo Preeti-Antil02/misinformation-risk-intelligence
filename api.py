@@ -254,8 +254,9 @@ except Exception as e:
 # -------------------------------------------------------
 # System & Deep Health Probing Endpoints
 # -------------------------------------------------------
-@app.get("/")
-def root():
+@app.get("/api")
+@app.get("/api/info")
+def api_info():
     return {
         "system":    "RiskLens Misinformation Risk Intelligence System",
         "version":   "2.1.0",
@@ -264,6 +265,7 @@ def root():
         "offline_models": ["Qwen2.5-3B-Instruct (GPU Batch Evaluation Only)"],
         "endpoints": ["/verify", "/predict", "/telegram/webhook", "/analytics", "/analytics/dashboard", "/operations/metrics", "/health", "/version", "/docs"],
     }
+
 
 
 @app.get("/version")
@@ -827,6 +829,7 @@ http_client = httpx.AsyncClient(base_url=STREAMLIT_URL, timeout=120.0)
 
 @app.websocket("/_stcore/stream")
 @app.websocket("/_stcore/stream/{path:path}")
+@app.websocket("/stream")
 async def streamlit_ws_proxy(websocket: WebSocket, path: str = ""):
     """Bi-directional WebSocket bridge to internal Streamlit instance."""
     await websocket.accept()
@@ -860,9 +863,11 @@ async def streamlit_ws_proxy(websocket: WebSocket, path: str = ""):
         logger.debug(f"Streamlit WebSocket proxy closed: {e}")
 
 
+@app.api_route("/", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
-async def streamlit_http_proxy(request: Request, full_path: str):
+async def streamlit_http_proxy(request: Request, full_path: str = ""):
     """Catch-all proxy routing UI traffic, static assets, and health to internal Streamlit."""
+
     url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8") if request.url.query else None)
     try:
         excluded_headers = {"host", "content-length", "connection", "upgrade"}
