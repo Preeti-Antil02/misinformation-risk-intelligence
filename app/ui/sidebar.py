@@ -31,55 +31,122 @@ def render_sidebar():
         """
         render_html(html_head)
 
-        # 2. Live Data Query
+        # 2. Live Data Query (All-Time Primary + Today Secondary)
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
             today = date.today().isoformat()
 
+            # All-time total verifications + today's count
+            cursor.execute("SELECT COUNT(*) FROM predictions")
+            total_verifs = cursor.fetchone()[0]
+
             cursor.execute("SELECT COUNT(*) FROM predictions WHERE timestamp LIKE ?", (f"{today}%",))
             verifs_today = cursor.fetchone()[0]
 
-            cursor.execute("SELECT COUNT(*) FROM predictions WHERE timestamp LIKE ? AND (risk_level = 'High' OR risk_level = 'Critical')", (f"{today}%",))
-            high_crit_today = cursor.fetchone()[0]
+            # All-time risk alerts (High/Critical) + today's alerts
+            cursor.execute("SELECT COUNT(*) FROM predictions WHERE risk_level IN ('High', 'Critical')")
+            total_risk_alerts = cursor.fetchone()[0]
 
-            cursor.execute("SELECT language, COUNT(*) as count FROM predictions WHERE timestamp LIKE ? GROUP BY language ORDER BY count DESC", (f"{today}%",))
-            lang_counts = cursor.fetchall()
+            cursor.execute("SELECT COUNT(*) FROM predictions WHERE timestamp LIKE ? AND risk_level IN ('High', 'Critical')", (f"{today}%",))
+            risk_alerts_today = cursor.fetchone()[0]
+
+            # All-time language distribution and active languages
+            cursor.execute("SELECT language, COUNT(*) as count FROM predictions GROUP BY language ORDER BY count DESC")
+            all_lang_counts = cursor.fetchall()
+            all_lang_counts = [dict(r) for r in all_lang_counts]
+            total_langs_active = len(all_lang_counts)
 
             cursor.execute("SELECT text, risk_level, timestamp FROM predictions ORDER BY timestamp DESC LIMIT 5")
             recent_verifs = cursor.fetchall()
             conn.close()
         except Exception:
-            verifs_today, high_crit_today, lang_counts, recent_verifs = 0, 0, [], []
+            total_verifs, verifs_today = 0, 0
+            total_risk_alerts, risk_alerts_today = 0, 0
+            all_lang_counts, total_langs_active, recent_verifs = [], 0, []
 
         live_acc_data = calculate_live_accuracy()
+        total_feedback = live_acc_data.get("total_feedback", 0)
         live_acc = live_acc_data.get("live_accuracy", 0.0)
+
+        # Formatted card headline and subtext values
+        c1_num = f"{total_verifs:,}" if total_verifs > 0 else "0"
+        c1_sub = f"{verifs_today} today" if total_verifs > 0 else "No claims yet"
+
+        c2_num = f"{total_risk_alerts:,}" if total_risk_alerts > 0 else "0"
+        c2_sub = f"{risk_alerts_today} today" if total_verifs > 0 else "All-time alerts"
+
+        if total_feedback == 0:
+            c3_num = "Pending"
+            c3_sub = "0 ratings yet"
+        elif total_feedback < 3:
+            c3_num = f"{live_acc*100:.0f}%*"
+            c3_sub = f"{total_feedback} rating{'s' if total_feedback > 1 else ''}"
+        else:
+            c3_num = f"{live_acc*100:.1f}%"
+            c3_sub = f"{total_feedback} ratings"
+
+        c4_num = str(total_langs_active)
+        c4_sub = "All-time regional"
 
         # 3. Stat Grid
         html_stats = f"""
             <div class="stat-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);"><div class="stat-num" style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--text);">{verifs_today:,}</div><div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:5px; text-transform:uppercase; font-weight:600;">Verified today</div></div>
-                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border); border-bottom: 2px solid var(--critical);"><div class="stat-num" style="color:var(--critical); font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700;">{high_crit_today}</div><div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:5px; text-transform:uppercase; font-weight:600;">Risk Alerts</div></div>
-                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);"><div class="stat-num" style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--text);">{live_acc*100:.1f}%</div><div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:5px; text-transform:uppercase; font-weight:600;">Live Accuracy</div></div>
-                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);"><div class="stat-num" style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--text);">{len(lang_counts)}</div><div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:5px; text-transform:uppercase; font-weight:600;">Langs Active</div></div>
+                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);">
+                    <div class="stat-num" style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--text);">{c1_num}</div>
+                    <div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Total Verified</div>
+                    <div style="font-size:9.5px; color:var(--text-faint); margin-top:2px; font-weight:500;">{c1_sub}</div>
+                </div>
+                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border); border-bottom: 2px solid var(--critical);">
+                    <div class="stat-num" style="color:var(--critical); font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700;">{c2_num}</div>
+                    <div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Risk Alerts</div>
+                    <div style="font-size:9.5px; color:var(--text-faint); margin-top:2px; font-weight:500;">{c2_sub}</div>
+                </div>
+                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);">
+                    <div class="stat-num" style="font-family:'JetBrains Mono',monospace; font-size:{'16px' if total_feedback == 0 else '20px'}; font-weight:700; color:{'var(--text-muted)' if total_feedback == 0 else 'var(--text)'};">{c3_num}</div>
+                    <div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Live Accuracy</div>
+                    <div style="font-size:9.5px; color:var(--text-faint); margin-top:2px; font-weight:500;">{c3_sub}</div>
+                </div>
+                <div class="stat-card" style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border);">
+                    <div class="stat-num" style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--text);">{c4_num}</div>
+                    <div class="stat-label" style="font-size:10px; color:var(--text-muted); margin-top:4px; text-transform:uppercase; font-weight:600;">Langs Active</div>
+                    <div style="font-size:9.5px; color:var(--text-faint); margin-top:2px; font-weight:500;">{c4_sub}</div>
+                </div>
             </div>
         """
         render_html(html_stats)
 
         # 4. Accuracy Ring
         st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-        deg = int(live_acc * 360)
+        if total_feedback == 0:
+            ring_bg = "background:conic-gradient(var(--border) 0deg 360deg);"
+            center_label = "--"
+            title_text = "Awaiting Feedback"
+            sub_text = "Rate verifications to calibrate"
+        elif total_feedback < 3:
+            deg = max(1, int(live_acc * 360))
+            ring_bg = f"background:conic-gradient(var(--low) 0deg {deg}deg, var(--border) {deg}deg 360deg);"
+            center_label = f"{int(live_acc*100)}%"
+            title_text = f"{live_acc*100:.0f}% accurate"
+            sub_text = f"Early signal ({total_feedback} rating{'s' if total_feedback > 1 else ''})"
+        else:
+            deg = max(1, int(live_acc * 360))
+            ring_bg = f"background:conic-gradient(var(--low) 0deg {deg}deg, var(--border) {deg}deg 360deg);"
+            center_label = f"{int(live_acc*100)}%"
+            title_text = f"{live_acc*100:.1f}% accurate"
+            sub_text = f"Based on {total_feedback} live user ratings"
+
         html_fidelity = f"""
             <div class="side-block" style="background:var(--surface-alt); border-radius:var(--radius-md); padding:16px; border:1px solid var(--border);">
                 <div class="side-block-title" style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:12px;">System Fidelity</div>
                 <div style="display:flex; align-items:center; gap:16px;">
-                    <div style="width:64px; height:68px; border-radius:50%; flex-shrink:0; background:conic-gradient(var(--low) 0deg {deg}deg, var(--border) {deg}deg 360deg); display:flex; align-items:center; justify-content:center; position:relative;">
+                    <div style="width:64px; height:64px; border-radius:50%; flex-shrink:0; {ring_bg} display:flex; align-items:center; justify-content:center; position:relative;">
                         <div style="position:absolute; inset:6px; border-radius:50%; background:var(--surface-alt);"></div>
-                        <div style="position:relative; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:var(--text);">{int(live_acc*100)}%</div>
+                        <div style="position:relative; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:var(--text);">{center_label}</div>
                     </div>
                     <div>
-                        <div style="font-size:15px; font-weight:700; color:var(--text);">{live_acc*100:.1f}% accurate</div>
-                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Based on live user feedback</div>
+                        <div style="font-size:15px; font-weight:700; color:var(--text);">{title_text}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">{sub_text}</div>
                     </div>
                 </div>
             </div>
@@ -89,17 +156,24 @@ def render_sidebar():
         # 5. Language Usage
         st.markdown("<div style='height:24px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='side-block-title' style='font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:12px; margin-left: 5px;'>Language Distribution</div>", unsafe_allow_html=True)
-        total_verifs = sum(row['count'] for row in lang_counts) if lang_counts else 1
-        for row in lang_counts[:4]:
-            pct = (row['count'] / total_verifs) * 100
-            html_lang = f"""
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding: 0 5px;">
-                    <span style="width:30px; color:var(--text-muted); font-weight:700; font-size:11px; text-transform:uppercase;">{row['language']}</span>
-                    <div style="flex:1; height:6px; background:var(--border); border-radius:4px; overflow:hidden;"><div style="height:100%; width:{pct}%; border-radius:4px; background:linear-gradient(90deg,var(--primary),var(--low));"></div></div>
-                    <span style="width:34px; text-align:right; color:var(--text-faint); font-family:'JetBrains Mono',monospace; font-size:10.5px;">{int(pct)}%</span>
+        total_lang_samples = sum(row['count'] for row in all_lang_counts)
+        if total_lang_samples == 0:
+            render_html("""
+                <div style="font-size:11.5px; color:var(--text-muted); padding: 4px 6px; line-height: 1.4;">
+                    No claims recorded yet. Verify text, URLs, or screenshots above.
                 </div>
-            """
-            render_html(html_lang)
+            """)
+        else:
+            for row in all_lang_counts[:4]:
+                pct = (row['count'] / total_lang_samples) * 100
+                html_lang = f"""
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding: 0 5px;">
+                        <span style="width:30px; color:var(--text-muted); font-weight:700; font-size:11px; text-transform:uppercase;">{row['language']}</span>
+                        <div style="flex:1; height:6px; background:var(--border); border-radius:4px; overflow:hidden;"><div style="height:100%; width:{pct}%; border-radius:4px; background:linear-gradient(90deg,var(--primary),var(--low));"></div></div>
+                        <span style="width:34px; text-align:right; color:var(--text-faint); font-family:'JetBrains Mono',monospace; font-size:10.5px;">{int(pct)}%</span>
+                    </div>
+                """
+                render_html(html_lang)
 
         # 6. Telegram CTA (Replacing WhatsApp for Security)
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)

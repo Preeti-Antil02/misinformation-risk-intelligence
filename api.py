@@ -81,6 +81,7 @@ from risklens.monitoring import (
     send_alert,
     init_sentry
 )
+from risklens.telegram_bot import create_telegram_app, verify_telegram_secret_token
 
 # Load environment configuration & initialize logging
 load_dotenv()
@@ -93,6 +94,11 @@ API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 API_KEY_QUERY = APIKeyQuery(name="api_key", auto_error=False)
 EXPECTED_API_KEY = os.getenv("RISKLENS_API_KEY", "")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+TELEGRAM_MODE = os.getenv("TELEGRAM_MODE", "polling").lower()
+BACKEND_API_URL = os.getenv("BACKEND_API_URL", "")
+
+# Telegram Application instance (initialized in lifespan for webhook mode)
+tg_application = None
 
 
 def get_api_key(
@@ -172,8 +178,8 @@ async def scheduled_webhook_health_job():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager initializing and shutting down APScheduler."""
-    global scheduler
+    """Application lifespan manager initializing APScheduler and Telegram webhook."""
+    global scheduler, tg_application
     if HAS_APSCHEDULER:
         scheduler = AsyncIOScheduler()
         scheduler.add_job(
@@ -196,7 +202,47 @@ async def lifespan(app: FastAPI):
         )
         scheduler.start()
         logger.info("APScheduler initialized: Retraining (02:00 UTC), Drift Monitor (01:00 UTC), Webhook Inspector (15m).")
+
+    # Initialize Telegram bot in webhook mode
+    if TELEGRAM_MODE == "webhook" and HAS_TELEGRAM:
+        try:
+            tg_application = create_telegram_app()
+            if tg_application:
+                await tg_application.initialize()
+                # Determine public webhook URL
+                webhook_base = BACKEND_API_URL.rstrip("/") if BACKEND_API_URL else ""
+                if not webhook_base:
+                    # Auto-detect HF Spaces URL from SPACE_ID if available
+                    space_id = os.getenv("SPACE_ID", "")
+                    if space_id:
+                        webhook_base = f"https://{space_id.replace('/', '-').lower()}.hf.space"
+                webhook_url = f"{webhook_base}/telegram/webhook" if webhook_base else ""
+                if webhook_url:
+                    await tg_application.bot.set_webhook(
+                        url=webhook_url,
+                        secret_token=TELEGRAM_WEBHOOK_SECRET or None,
+                        allowed_updates=["message", "callback_query"]
+                    )
+                    logger.info(f"Telegram webhook registered: {webhook_url}")
+                else:
+                    logger.warning("BACKEND_API_URL not set. Telegram webhook URL not registered. Set it manually via BotFather or env var.")
+                await tg_application.start()
+                logger.info("Telegram Application started in webhook mode.")
+        except Exception as e:
+            logger.error(f"Failed to initialize Telegram webhook: {str(e)}", exc_info=True)
+            tg_application = None
+
     yield
+
+    # Shutdown Telegram application
+    if tg_application:
+        try:
+            await tg_application.stop()
+            await tg_application.shutdown()
+            logger.info("Telegram Application shutdown complete.")
+        except Exception as e:
+            logger.error(f"Error shutting down Telegram app: {str(e)}")
+
     if scheduler and scheduler.running:
         scheduler.shutdown()
         logger.info("APScheduler shutdown complete.")
@@ -410,6 +456,36 @@ def health():
 
     status_code = 200 if is_healthy else 503
     return JSONResponse(status_code=status_code, content=payload)
+
+
+# -------------------------------------------------------
+# Telegram Webhook Endpoint
+# -------------------------------------------------------
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    """
+    Receives Telegram updates via webhook push.
+    Validates X-Telegram-Bot-Api-Secret-Token header for authenticity.
+    """
+    global tg_application
+    if not tg_application:
+        raise HTTPException(status_code=503, detail="Telegram bot is not initialized. Check TELEGRAM_MODE and TELEGRAM_BOT_TOKEN.")
+
+    # Validate webhook secret token if configured
+    if TELEGRAM_WEBHOOK_SECRET:
+        token_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not verify_telegram_secret_token(token_header):
+            logger.warning("Telegram webhook request with invalid secret token rejected.")
+            raise HTTPException(status_code=403, detail="Invalid webhook secret token.")
+
+    try:
+        data = await request.json()
+        update = Update.de_json(data, tg_application.bot)
+        await tg_application.process_update(update)
+        return JSONResponse(content={"status": "ok"})
+    except Exception as e:
+        logger.error(f"Error processing Telegram webhook update: {str(e)}", exc_info=True)
+        return JSONResponse(status_code=200, content={"status": "error", "detail": str(e)})
 
 
 # -------------------------------------------------------

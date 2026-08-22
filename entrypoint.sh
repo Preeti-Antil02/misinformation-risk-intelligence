@@ -42,10 +42,15 @@ python -m uvicorn api:app \
     --workers 1 &
 FASTAPI_PID=$!
 
-# 3. Start Telegram Bot in background (if configured)
+# 3. Start Telegram Bot in background (if configured and in polling mode)
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-    echo "🤖 [3/4] Launching Telegram Bot in polling mode..."
-    python risklens/telegram_bot.py &
+    TGMODE="${TELEGRAM_MODE:-polling}"
+    if [ "$TGMODE" = "webhook" ]; then
+        echo "🤖 [3/4] Telegram Bot will run in webhook mode via FastAPI (no standalone worker)."
+    else
+        echo "🤖 [3/4] Launching Telegram Bot in polling mode..."
+        python risklens/telegram_bot.py &
+    fi
 else
     echo "ℹ️ [3/4] TELEGRAM_BOT_TOKEN not configured. Telegram bot worker skipped."
 fi

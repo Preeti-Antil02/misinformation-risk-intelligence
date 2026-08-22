@@ -26,8 +26,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
 
 # Configurable Limits
-MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024 # 10MB
-MAX_DIMENSION = 5000 # Max width or height
+MAX_IMAGE_SIZE_BYTES = 200 * 1024 * 1024 # 200MB
+MAX_DIMENSION = 10000 # Max width or height
 
 # Try importing EasyOCR
 try:

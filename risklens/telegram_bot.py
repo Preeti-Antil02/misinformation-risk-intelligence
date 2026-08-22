@@ -77,8 +77,8 @@ MAX_DAILY_REQUESTS = 20
 
 def escape_markdown(text: str) -> str:
     """
-    Escapes special characters in Markdown to prevent parse failures and injection.
-    Escapes: * _ ` [ ] ( ) ~ > # + - = | { } . !
+    Escapes special characters for Telegram MarkdownV2 parse mode.
+    Escapes: _ * [ ] ( ) ~ ` > # + - = | { } . !
     """
     if not text:
         return ""
@@ -152,15 +152,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Secure welcome message."""
     try:
         welcome_text = (
-            "🛡️ *RiskLens Misinformation Intelligence*\n\n"
+            "🛡️ RiskLens Misinformation Intelligence\n\n"
             "Welcome! I am your secure assistant for verifying news and claims.\n\n"
-            "📥 *How to use:*\n"
+            "📥 How to use:\n"
             "• Forward any text message or news headline.\n"
             "• Send a URL of a web article.\n"
             "• Send a screenshot of a viral post.\n\n"
             "I will perform a neural verification and provide a risk assessment instantly."
         )
-        await update.message.reply_text(welcome_text, parse_mode='Markdown')
+        await update.message.reply_text(welcome_text)
     except Exception as e:
         logger.error(f"Error in /start handler: {str(e)}")
 
@@ -168,7 +168,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def format_telegram_report(data: dict) -> dict:
     """
     Standardized, shared formatting function for Telegram reports.
-    Uses robust markdown escaping to eliminate parse breakages and injection.
+    Uses plain text formatting for maximum reliability with dynamic content.
     """
     risk_level = data.get("risk_level", "Moderate")
     prob = data.get("risk_score", data.get("probability", 0.5))
@@ -176,31 +176,30 @@ def format_telegram_report(data: dict) -> dict:
     claim = data.get("claim", "")
     verdict = data.get("verdict", "")
 
-    risk_tag = escape_markdown(risk_level.upper())
-    escaped_claim = escape_markdown(truncate_text(claim, 1000))
-    escaped_verdict = escape_markdown(truncate_text(verdict, 2000))
+    safe_claim = truncate_text(claim, 1000)
+    safe_verdict = truncate_text(verdict, 2000)
 
-    markdown_text = textwrap.dedent(f"""
-        *RISK ASSESSMENT: {risk_tag}*
-        ─────────────────────
-        *Claim Detected:*
-        _{escaped_claim}_
+    # Risk level emoji mapping
+    risk_emoji = {"Critical": "🔴", "High": "🟠", "Moderate": "🟡", "Low": "🟢"}.get(risk_level, "⚪")
 
-        *Verdict:*
-        {escaped_verdict}
-
-        *Confidence:* {confidence_pct}%
-        ─────────────────────
-        Was this intelligence accurate?
-    """).strip()
+    report_text = (
+        f"{risk_emoji} RISK ASSESSMENT: {risk_level.upper()}\n"
+        f"─────────────────────\n"
+        f"📋 Claim Detected:\n"
+        f"{safe_claim}\n\n"
+        f"📝 Verdict:\n"
+        f"{safe_verdict}\n\n"
+        f"📊 Confidence: {confidence_pct}%\n"
+        f"─────────────────────\n"
+        f"Was this intelligence accurate?"
+    )
 
     return {
         "risk_level": risk_level,
-        "risk_tag": risk_tag,
         "confidence_pct": confidence_pct,
         "claim": claim,
         "verdict": verdict,
-        "raw_markdown": markdown_text
+        "raw_text": report_text
     }
 
 
@@ -328,7 +327,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         formatted_report = format_telegram_report(data)
-        report = formatted_report["raw_markdown"]
+        report = formatted_report["raw_text"]
 
         keyboard = [
             [
@@ -340,7 +339,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status_msg.delete()
         await update.message.reply_text(
             report,
-            parse_mode='Markdown',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         logger.info(f"Verification report successfully delivered to user {anonymize_user_id(user_id)}")
@@ -417,6 +415,32 @@ async def telegram_error_handler(update: Optional[object], context: ContextTypes
     )
 
 
+def setup_handlers(app):
+    """Register all bot handlers on a Telegram Application instance.
+    Reusable by both standalone polling mode and FastAPI webhook integration."""
+    app.add_error_handler(telegram_error_handler)
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler((filters.TEXT & ~filters.COMMAND) | filters.PHOTO, handle_message))
+    app.add_handler(CallbackQueryHandler(handle_callback))
+    return app
+
+
+def create_telegram_app(token: str = ""):
+    """Create and configure a Telegram Application with all handlers.
+    Used by FastAPI webhook integration to get a configured app instance."""
+    if not HAS_TELEGRAM:
+        logger.error("python-telegram-bot is not installed. Telegram app cannot be created.")
+        return None
+    tok = token or TELEGRAM_TOKEN
+    if not tok:
+        logger.error("TELEGRAM_BOT_TOKEN is not configured.")
+        return None
+    app = ApplicationBuilder().token(tok).build()
+    setup_handlers(app)
+    logger.info("Telegram Application created and handlers registered.")
+    return app
+
+
 if __name__ == '__main__':
     if not HAS_TELEGRAM:
         logger.critical("python-telegram-bot is not installed.")
@@ -426,11 +450,6 @@ if __name__ == '__main__':
         logger.critical("TELEGRAM_BOT_TOKEN is missing in .env")
         sys.exit(1)
 
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    app.add_error_handler(telegram_error_handler)
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
-    app.add_handler(CallbackQueryHandler(handle_callback))
-
+    app = create_telegram_app(TELEGRAM_TOKEN)
     logger.info("RiskLens Telegram Bot service starting in secure polling mode with monitoring active...")
     app.run_polling()

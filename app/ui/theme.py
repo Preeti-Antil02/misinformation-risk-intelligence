@@ -449,51 +449,81 @@ def inject_theme():
        4. SIMPLIFIED 'BROWSE FILES' SINGLE-BUTTON UPLOADER
        ======================================================================== */
     div[data-testid="stFileUploader"] {{
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }}
+
+    /* Target the dropzone section to look identical to a 44px secondary button */
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"],
+    div[data-testid="stFileUploader"] section {{
         background: var(--surface) !important;
         border: 1px solid var(--border) !important;
         border-radius: 12px !important;
-        padding: 0 !important;
+        padding: 0 14px !important;
         min-height: 44px !important;
+        height: 44px !important;
+        max-height: 44px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
         cursor: pointer !important;
-        box-shadow: var(--shadow-sm);
+        box-shadow: var(--shadow-sm) !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }}
-    div[data-testid="stFileUploader"]:hover {{
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"]:hover,
+    div[data-testid="stFileUploader"] section:hover {{
         background: var(--surface-alt) !important;
         border-color: var(--primary-2) !important;
         transform: translateY(-1.5px);
+        box-shadow: var(--shadow-md) !important;
     }}
 
-    div[data-testid="stFileUploader"] section {{
-        padding: 0 !important;
-        background: transparent !important;
-        border: none !important;
-        min-height: 42px !important;
+    /* Active Drag-over state styling */
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"]:focus-within,
+    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"]:active {{
+        border-color: var(--primary-2) !important;
+        background: var(--surface-alt) !important;
+    }}
+
+    /* Hide persistent verbose 'Drag and drop file here' text, subtext & default icons */
+    div[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzoneInstructions"],
+    div[data-testid="stFileUploader"] section [data-testid="stFileUploaderDropzoneInstructions"],
+    div[data-testid="stFileUploader"] section small,
+    div[data-testid="stFileUploader"] section > div > div > small,
+    div[data-testid="stFileUploader"] section svg {{
+        display: none !important;
+    }}
+
+    /* Keep inner container compact and centered */
+    div[data-testid="stFileUploader"] section > div {{
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
         width: 100% !important;
-    }}
-
-    /* Hide persistent bulky multi-line text in resting state */
-    div[data-testid="stFileUploader"] section small,
-    div[data-testid="stFileUploader"] section > div > div > small,
-    div[data-testid="stFileUploader"] section span[data-testid="stUploadDropzoneInstructions"] {{
-        display: none !important;
     }}
 
     div[data-testid="stFileUploader"] section > div > div {{
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 8px !important;
-        padding: 8px 16px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
     }}
 
-    /* Style the inner button seamlessly */
+    /* Style the inner 'Browse files' button text seamlessly */
     div[data-testid="stFileUploader"] section button {{
         background: transparent !important;
         border: none !important;
@@ -501,11 +531,16 @@ def inject_theme():
         font-weight: 600 !important;
         font-size: 13px !important;
         padding: 0 !important;
+        margin: 0 !important;
         box-shadow: none !important;
-        display: flex !important;
+        display: inline-flex !important;
         align-items: center !important;
-        gap: 7px !important;
+        justify-content: center !important;
+        gap: 6px !important;
         min-height: auto !important;
+        height: auto !important;
+        cursor: pointer !important;
+        width: 100% !important;
     }}
     div[data-testid="stFileUploader"] section button:hover {{
         color: var(--text) !important;
@@ -517,7 +552,19 @@ def inject_theme():
         content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%238B7CF6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12M7 8l5-5 5 5M5 21h14'/%3E%3C/svg%3E");
         display: inline-block;
         vertical-align: middle;
-        margin-right: 3px;
+        margin-right: 4px;
+    }}
+
+    /* Style the uploaded file list / error item if rendered by Streamlit */
+    div[data-testid="stFileUploader"] [data-testid="stFileUploaderFile"],
+    div[data-testid="stFileUploader"] ul[data-testid="stFileUploaderPagination"] {{
+        background: var(--surface-alt) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+        padding: 4px 8px !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }}
 
     /* Badges & Chips */

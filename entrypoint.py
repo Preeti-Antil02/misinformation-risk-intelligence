@@ -84,12 +84,16 @@ def main():
     )
     processes.append(st_proc)
     
-    # 4. Launch Telegram Bot (if token configured)
+    # 4. Launch Telegram Bot (if token configured and in polling mode)
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    tg_mode = os.getenv("TELEGRAM_MODE", "polling").lower()
     if tg_token:
-        print("🤖 Launching Telegram Bot worker...")
-        tg_proc = subprocess.Popen([sys.executable, "risklens/telegram_bot.py"], cwd=BASE_DIR)
-        processes.append(tg_proc)
+        if tg_mode == "webhook":
+            print("🤖 Telegram Bot will run in webhook mode via FastAPI (no standalone worker).")
+        else:
+            print("🤖 Launching Telegram Bot worker in polling mode...")
+            tg_proc = subprocess.Popen([sys.executable, "risklens/telegram_bot.py"], cwd=BASE_DIR)
+            processes.append(tg_proc)
     else:
         print("ℹ️ TELEGRAM_BOT_TOKEN not configured. Telegram bot worker skipped.")
         
