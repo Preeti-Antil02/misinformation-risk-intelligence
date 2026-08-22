@@ -1121,7 +1121,7 @@ def inject_theme():
     /* =========================================================================
        Telegram Direct Access Hero & Header Components
        ========================================================================= */
-    .tg-hero-card {
+    .tg-hero-card {{
         background: linear-gradient(135deg, rgba(0, 136, 204, 0.12), rgba(0, 170, 255, 0.04)) !important;
         border: 1px solid rgba(0, 136, 204, 0.35) !important;
         border-radius: 16px !important;
@@ -1134,19 +1134,19 @@ def inject_theme():
         justify-content: space-between;
         max-width: 380px;
         min-width: 280px;
-    }
-    .tg-hero-card:hover {
+    }}
+    .tg-hero-card:hover {{
         border-color: rgba(0, 170, 255, 0.6) !important;
         box-shadow: 0 8px 28px rgba(0, 136, 204, 0.22) !important;
         transform: translateY(-2px);
-    }
-    .tg-hero-header {
+    }}
+    .tg-hero-header {{
         display: flex;
         align-items: center;
         gap: 12px;
         margin-bottom: 8px;
-    }
-    .tg-icon-circle {
+    }}
+    .tg-icon-circle {{
         width: 36px;
         height: 36px;
         border-radius: 10px;
@@ -1157,22 +1157,22 @@ def inject_theme():
         color: #ffffff;
         box-shadow: 0 2px 10px rgba(0, 136, 204, 0.4);
         flex-shrink: 0;
-    }
-    .tg-hero-title {
+    }}
+    .tg-hero-title {{
         font-family: 'Space Grotesk', sans-serif;
         font-weight: 700;
         font-size: 14px;
         color: var(--text);
         display: flex;
         align-items: center;
-    }
-    .tg-hero-handle {
+    }}
+    .tg-hero-handle {{
         font-family: 'JetBrains Mono', monospace;
         font-size: 11px;
         color: #00aaff;
         font-weight: 600;
-    }
-    .tg-online-badge {
+    }}
+    .tg-online-badge {{
         display: inline-flex;
         align-items: center;
         gap: 5px;
@@ -1186,27 +1186,27 @@ def inject_theme():
         text-transform: uppercase;
         letter-spacing: 0.4px;
         margin-left: 8px;
-    }
-    .tg-pulse {
+    }}
+    .tg-pulse {{
         width: 6px;
         height: 6px;
         border-radius: 50%;
         background: #2FCC93;
         box-shadow: 0 0 6px #2FCC93;
         animation: pulseAnimation 1.8s infinite;
-    }
-    .tg-hero-desc {
+    }}
+    .tg-hero-desc {{
         font-size: 11.5px;
         color: var(--text-muted);
         line-height: 1.45;
         margin: 0 0 12px 0;
-    }
-    .tg-hero-buttons {
+    }}
+    .tg-hero-buttons {{
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
-    }
-    .tg-btn-primary {
+    }}
+    .tg-btn-primary {{
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -1220,13 +1220,13 @@ def inject_theme():
         text-decoration: none !important;
         transition: all 0.2s ease !important;
         box-shadow: 0 2px 8px rgba(0, 136, 204, 0.35) !important;
-    }
-    .tg-btn-primary:hover {
+    }}
+    .tg-btn-primary:hover {{
         box-shadow: 0 4px 14px rgba(0, 136, 204, 0.5) !important;
         transform: translateY(-1px) !important;
         color: #ffffff !important;
-    }
-    .tg-btn-secondary {
+    }}
+    .tg-btn-secondary {{
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -1240,13 +1240,13 @@ def inject_theme():
         text-decoration: none !important;
         border: 1px solid var(--border) !important;
         transition: all 0.2s ease !important;
-    }
-    .tg-btn-secondary:hover {
+    }}
+    .tg-btn-secondary:hover {{
         background: rgba(255, 255, 255, 0.12) !important;
         color: var(--text) !important;
         border-color: rgba(0, 136, 204, 0.4) !important;
-    }
-    .tg-header-badge {
+    }}
+    .tg-header-badge {{
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -1260,14 +1260,14 @@ def inject_theme():
         text-decoration: none;
         transition: all 0.2s ease;
         margin-right: 8px;
-    }
-    .tg-header-badge:hover {
+    }}
+    .tg-header-badge:hover {{
         background: linear-gradient(135deg, rgba(0, 136, 204, 0.28), rgba(0, 170, 255, 0.18));
         border-color: rgba(0, 170, 255, 0.6);
         color: #ffffff !important;
         transform: translateY(-1px);
         box-shadow: 0 2px 10px rgba(0, 136, 204, 0.25);
-    }
+    }}
 
     /* Hide Streamlit Cruft */
     header[data-testid="stHeader"], #MainMenu, footer {{
