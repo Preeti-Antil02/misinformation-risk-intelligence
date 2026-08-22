@@ -466,10 +466,13 @@ def render_tab_verify():
             parsed = reader.fetch_and_parse(matched_url)
             article_content = f"{parsed['title']}. {parsed['full_text'][:2000]}" if parsed.get("full_text") else user_text
 
+            cred_tier = cred_info.get("credibility_tier", "Unrated")
+            cred_score = cred_info.get("credibility_score", 0.5)
+
             with proc_placeholder.container():
                 render_processing_panel(2, {
                     "lang_name": "English (Web Source)",
-                    "lang_sub": f"Domain tier: {cred_info['credibility_tier'].title()} ({cred_info['credibility_score']*100:.0f}% trust)",
+                    "lang_sub": f"Domain tier: {cred_tier.title()} ({cred_score*100:.0f}% trust)",
                     "model_title": "Running LangGraph Multi-Agent Fact Search",
                     "model_sub": "Grounding article claims against authoritative web sources",
                     "synth_title": "Synthesizing verdict",
@@ -479,19 +482,19 @@ def render_tab_verify():
             agent_res = verify(article_content, url=matched_url)
             explanation_res = explain_prediction(article_content)
             content_prob = explanation_res.get("probability", 0.5)
-            integrated_risk = compute_integrated_risk(content_prob, cred_info["credibility_score"])
+            integrated_risk = compute_integrated_risk(content_prob, cred_score)
 
             data = {
                 "claim": agent_res.get("claim", parsed.get("title", user_text[:120])),
                 "verdict": agent_res.get("verdict", "Live article verification complete."),
-                "sources": agent_res.get("sources", [{"name": cred_info["domain"], "url": matched_url, "verified": True}]),
+                "sources": agent_res.get("sources", [{"name": cred_info.get("domain", "web-source"), "url": matched_url, "verified": True}]),
                 "risk_score": round(integrated_risk, 4),
                 "risk_level": agent_res.get("risk_level", "Moderate"),
                 "explanation": explanation_res,
                 "source_language": "en"
             }
             final_text = article_content
-            model_used = f"Deep Web + Domain Credibility ({cred_info['credibility_tier']})"
+            model_used = f"Deep Web + Domain Credibility ({cred_tier})"
 
             with proc_placeholder.container():
                 render_processing_panel(3, {

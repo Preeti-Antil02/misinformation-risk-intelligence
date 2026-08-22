@@ -108,9 +108,12 @@ class SourceCredibilityEngine:
 
             if not match.empty:
                 row = match.iloc[0]
+                score = round(float(row["credibility_score"]), 4)
+                tier = self._score_to_tier(score)
                 return {
                     "domain": domain,
-                    "credibility_score": round(float(row["credibility_score"]), 4),
+                    "credibility_score": score,
+                    "credibility_tier": tier,
                     "bias_label": str(row["bias_label"]),
                     "category": str(row.get("category", "General")),
                     "found_in_db": True
@@ -121,10 +124,23 @@ class SourceCredibilityEngine:
         return {
             "domain": "unknown",
             "credibility_score": 0.50,
+            "credibility_tier": "Tier 3 (Unverified)",
             "bias_label": "Unrated",
             "category": "Unknown",
             "found_in_db": False
         }
+
+    @staticmethod
+    def _score_to_tier(score: float) -> str:
+        """Converts numeric credibility score (0-1) into human-readable authority tier."""
+        if score >= 0.85:
+            return "Tier 1 (High Authority)"
+        elif score >= 0.70:
+            return "Tier 2 (Reputable)"
+        elif score >= 0.40:
+            return "Tier 3 (Mixed/Unverified)"
+        else:
+            return "Tier 4 (Low Trust/Flagged)"
 
     def compute_integrated_risk(
         self,
