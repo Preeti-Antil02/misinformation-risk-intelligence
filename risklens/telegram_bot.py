@@ -452,4 +452,4 @@ if __name__ == '__main__':
 
     app = create_telegram_app(TELEGRAM_TOKEN)
     logger.info("RiskLens Telegram Bot service starting in secure polling mode with monitoring active...")
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True, allowed_updates=["message", "callback_query"])

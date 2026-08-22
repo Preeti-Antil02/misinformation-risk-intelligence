@@ -12,10 +12,20 @@ ENV_PATH = Path(".env")
 USAGE_DB = Path("usage.db")
 
 def get_usage_connection():
-    """Returns usage DB connection with locking resilience."""
+    """Returns usage DB connection with locking resilience and auto-schema initialization."""
     try:
         conn = sqlite3.connect(USAGE_DB, timeout=5)
         conn.row_factory = sqlite3.Row
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                usage_date TEXT NOT NULL,
+                request_count INTEGER DEFAULT 1,
+                UNIQUE(user_id, usage_date)
+            )
+        """)
+        conn.commit()
         return conn
     except Exception as e:
         logger.error(f"Usage DB connection failed: {str(e)}")
