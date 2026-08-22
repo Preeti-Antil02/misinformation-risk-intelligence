@@ -1270,25 +1270,21 @@ def inject_theme():
     }}
 
     /* =========================================================================
-       Preview v4 Popover & Bot Pill Design System (Pure CSS Details-Summary)
+       Pure CSS Checkbox-Driven Popover with Full-Screen Backdrop Dismissal
        ========================================================================= */
     .bot-pill-wrap {{
         position: relative !important;
         display: inline-block !important;
         text-align: right !important;
     }}
-    .bot-pill-details {{
-        position: relative !important;
-        display: inline-block !important;
-    }}
-    .bot-pill-details summary {{
-        list-style: none !important;
-        outline: none !important;
-        cursor: pointer !important;
-        user-select: none !important;
-    }}
-    .bot-pill-details summary::-webkit-details-marker,
-    .bot-pill-details summary::marker {{
+    .tg-toggle-input {{
+        position: absolute !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
         display: none !important;
     }}
     .bot-pill {{
@@ -1311,7 +1307,7 @@ def inject_theme():
         box-shadow: none !important;
     }}
     .bot-pill:hover,
-    .bot-pill-details[open] .bot-pill {{
+    .tg-toggle-input:checked + .bot-pill {{
         background: rgba(79, 209, 184, 0.15) !important;
         border-color: rgba(79, 209, 184, 0.4) !important;
         color: #FFFFFF !important;
@@ -1328,16 +1324,20 @@ def inject_theme():
     }}
 
     .bot-backdrop {{
+        display: none;
         position: fixed !important;
         inset: 0 !important;
+        top: 0 !important;
+        left: 0 !important;
         width: 100vw !important;
         height: 100vh !important;
         z-index: 99998 !important;
-        background: transparent !important;
+        background: rgba(0, 0, 0, 0.001) !important;
         cursor: default !important;
     }}
 
     .bot-popover {{
+        display: none;
         position: absolute !important;
         top: calc(100% + 10px) !important;
         right: 0 !important;
@@ -1358,6 +1358,18 @@ def inject_theme():
     @keyframes popoverFadeIn {{
         from {{ opacity: 0; transform: translateY(-6px); }}
         to {{ opacity: 1; transform: translateY(0); }}
+    }}
+
+    /* When Checked: reveal backdrop and popover */
+    .tg-toggle-input:checked ~ .bot-backdrop {{
+        display: block !important;
+    }}
+    .tg-toggle-input:checked ~ .bot-popover {{
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateY(0) !important;
+        pointer-events: auto !important;
     }}
 
     /* Tablet & Wrapped Header Viewport-Aware Positioning */
