@@ -436,10 +436,18 @@ def create_telegram_app(token: str = ""):
     tok = token or TELEGRAM_TOKEN
     if not tok:
         logger.error("TELEGRAM_BOT_TOKEN is not configured.")
-        return None
-    app = ApplicationBuilder().token(tok).build()
+    app = (
+        ApplicationBuilder()
+        .token(tok)
+        .read_timeout(30)
+        .write_timeout(30)
+        .connect_timeout(30)
+        .pool_timeout(30)
+        .get_updates_read_timeout(42)
+        .build()
+    )
     setup_handlers(app)
-    logger.info("Telegram Application created and handlers registered.")
+    logger.info("Telegram Application created and handlers registered with resilient timeouts.")
     return app
 
 

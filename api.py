@@ -213,10 +213,14 @@ async def lifespan(app: FastAPI):
                 # Determine public webhook URL
                 webhook_base = BACKEND_API_URL.rstrip("/") if BACKEND_API_URL else ""
                 if not webhook_base:
-                    # Auto-detect HF Spaces URL from SPACE_ID if available
+                    space_host = os.getenv("SPACE_HOST", "")
                     space_id = os.getenv("SPACE_ID", "")
-                    if space_id:
+                    if space_host:
+                        webhook_base = f"https://{space_host}"
+                    elif space_id:
                         webhook_base = f"https://{space_id.replace('/', '-').lower()}.hf.space"
+                    else:
+                        webhook_base = "https://preeti-antil-risklens.hf.space"
                 webhook_url = f"{webhook_base}/telegram/webhook" if webhook_base else ""
                 if webhook_url:
                     await tg_application.bot.set_webhook(

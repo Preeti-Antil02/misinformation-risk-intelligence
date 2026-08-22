@@ -540,7 +540,7 @@ def get_telegram_diagnostic() -> Dict[str, Any]:
     result = {"configured": True, "token_present": True}
     # 1. getMe
     try:
-        r_me = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=6)
+        r_me = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=25)
         if r_me.status_code == 200 and r_me.json().get("ok"):
             me = r_me.json().get("result", {})
             result["bot_info"] = {
@@ -556,7 +556,7 @@ def get_telegram_diagnostic() -> Dict[str, Any]:
 
     # 2. getWebhookInfo
     try:
-        r_wh = requests.get(f"https://api.telegram.org/bot{token}/getWebhookInfo", timeout=6)
+        r_wh = requests.get(f"https://api.telegram.org/bot{token}/getWebhookInfo", timeout=25)
         if r_wh.status_code == 200 and r_wh.json().get("ok"):
             wh = r_wh.json().get("result", {})
             result["webhook_info"] = {
