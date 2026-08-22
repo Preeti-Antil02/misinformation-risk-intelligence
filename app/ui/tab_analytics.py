@@ -11,10 +11,13 @@ from risklens.feedback import calculate_live_accuracy
 from risklens.monitoring import get_operational_metrics, check_telegram_webhook_health
 from app.ui.utils import render_html
 
-DB_PATH = Path("databases/feedback.db")
+def get_db_path() -> Path:
+    db_dir = Path(os.getenv("DATABASE_DIR", "databases"))
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return db_dir / "feedback.db"
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(get_db_path())
     conn.row_factory = sqlite3.Row
     return conn
 

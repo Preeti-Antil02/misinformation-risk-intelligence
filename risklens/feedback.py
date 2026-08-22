@@ -31,7 +31,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
 
-DATABASES_DIR = BASE_DIR / "databases"
+DATABASES_DIR = Path(os.getenv("DATABASE_DIR", str(BASE_DIR / "databases")))
 DATABASES_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATABASES_DIR / "feedback.db"
 

@@ -44,7 +44,11 @@ from app.ui.components.result_card import render_result_card
 from app.ui.components.telegram_preview import render_telegram_preview
 from app.ui.utils import render_html
 
-DB_PATH = Path("databases/feedback.db")
+def _get_db_path() -> Path:
+    db_dir = Path(os.getenv("DATABASE_DIR", "databases"))
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return db_dir / "feedback.db"
+
 MAX_UPLOAD_SIZE_BYTES = 200 * 1024 * 1024  # 200MB upload limit
 
 # Seed baseline verification records into SQLite if database is empty
@@ -89,8 +93,8 @@ INITIAL_HISTORICAL_BASELINE = [
 
 def _get_db_connection():
     """Returns SQLite connection to feedback.db with row factory."""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), timeout=10)
+    db_file = _get_db_path()
+    conn = sqlite3.connect(str(db_file), timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 

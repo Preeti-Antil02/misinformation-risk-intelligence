@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import sqlite3
 import textwrap
@@ -7,10 +8,13 @@ from risklens import __version__ as APP_VERSION
 from risklens.feedback import calculate_live_accuracy
 from app.ui.utils import render_html
 
-DB_PATH = Path("databases/feedback.db")
+def get_db_path() -> Path:
+    db_dir = Path(os.getenv("DATABASE_DIR", "databases"))
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return db_dir / "feedback.db"
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(get_db_path())
     conn.row_factory = sqlite3.Row
     return conn
 
