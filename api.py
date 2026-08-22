@@ -470,6 +470,46 @@ async def telegram_diagnostics():
     return get_telegram_diagnostic()
 
 
+@app.get("/telegram/set-webhook", tags=["Monitoring"])
+@app.post("/telegram/set-webhook", tags=["Monitoring"])
+async def trigger_set_webhook(request: Request):
+    """Triggers Telegram setWebhook to link the bot with this Space."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="TELEGRAM_BOT_TOKEN is not configured in Space secrets.")
+    
+    # Determine webhook URL
+    webhook_base = BACKEND_API_URL.rstrip("/") if BACKEND_API_URL else ""
+    if not webhook_base:
+        space_host = os.getenv("SPACE_HOST", "")
+        space_id = os.getenv("SPACE_ID", "")
+        if space_host:
+            webhook_base = f"https://{space_host}"
+        elif space_id:
+            webhook_base = f"https://{space_id.replace('/', '-').lower()}.hf.space"
+        else:
+            webhook_base = "https://preeti-antil-risklens.hf.space"
+    
+    webhook_url = f"{webhook_base}/telegram/webhook"
+    
+    # Call Telegram setWebhook API
+    params = {
+        "url": webhook_url,
+        "drop_pending_updates": True,
+        "allowed_updates": json.dumps(["message", "callback_query"])
+    }
+    if TELEGRAM_WEBHOOK_SECRET:
+        params["secret_token"] = TELEGRAM_WEBHOOK_SECRET
+
+    try:
+        tg_api_url = f"https://api.telegram.org/bot{token}/setWebhook"
+        resp = requests.get(tg_api_url, params=params, timeout=30)
+        return resp.json()
+    except Exception as e:
+        logger.error(f"Error setting Telegram webhook: {str(e)}")
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     """

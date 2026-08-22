@@ -64,6 +64,37 @@ def render_tab_settings():
                         st.error(f"Failed to write to .env: {str(e)}")
                         logger.error(f"Config write failure: {str(e)}")
 
+        # Webhook Activation Shortcut
+        if os.getenv("TELEGRAM_BOT_TOKEN"):
+            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+            col_wh1, col_wh2 = st.columns([3, 1])
+            with col_wh1:
+                st.markdown(
+                    "<div style='font-size: 13px; color: var(--text-secondary); padding-top: 8px;'>"
+                    "🔗 <b>Telegram Bot Webhook</b>: Link your bot directly to this live Space for instant responses."
+                    "</div>",
+                    unsafe_allow_html=True
+                )
+            with col_wh2:
+                if st.button("⚡ Activate Webhook", key="btn_sync_webhook", use_container_width=True):
+                    with st.spinner("Connecting Telegram Bot to Webhook..."):
+                        token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+                        webhook_url = "https://preeti-antil-risklens.hf.space/telegram/webhook"
+                        try:
+                            import requests
+                            r = requests.get(
+                                f"https://api.telegram.org/bot{token}/setWebhook",
+                                params={"url": webhook_url, "drop_pending_updates": True},
+                                timeout=20
+                            )
+                            res = r.json()
+                            if res.get("ok"):
+                                st.success("✓ Telegram Bot webhook activated successfully!")
+                            else:
+                                st.error(f"Telegram API Error: {res.get('description')}")
+                        except Exception as wh_err:
+                            st.error(f"Failed to set webhook: {wh_err}")
+
     # 2. Intelligence Routing
     st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
     st.markdown("### 🌐 Intelligence Routing Control")
