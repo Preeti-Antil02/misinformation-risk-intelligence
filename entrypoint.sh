@@ -44,7 +44,7 @@ FASTAPI_PID=$!
 
 # 3. Start Telegram Bot in background (if configured and in polling mode)
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-    TGMODE="${TELEGRAM_MODE:-polling}"
+    TGMODE="${TELEGRAM_MODE:-webhook}"
     if [ "$TGMODE" = "webhook" ]; then
         echo "🤖 [3/4] Telegram Bot will run in webhook mode via FastAPI (no standalone worker)."
     else

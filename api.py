@@ -95,7 +95,7 @@ API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 API_KEY_QUERY = APIKeyQuery(name="api_key", auto_error=False)
 EXPECTED_API_KEY = os.getenv("RISKLENS_API_KEY", "")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
-TELEGRAM_MODE = os.getenv("TELEGRAM_MODE", "polling").lower()
+TELEGRAM_MODE = os.getenv("TELEGRAM_MODE", "webhook").lower()
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "")
 
 # Telegram Application instance (initialized in lifespan for webhook mode)
@@ -478,7 +478,20 @@ async def telegram_webhook(request: Request):
     """
     global tg_application
     if not tg_application:
-        raise HTTPException(status_code=503, detail="Telegram bot is not initialized. Check TELEGRAM_MODE and TELEGRAM_BOT_TOKEN.")
+        tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        if tg_token and HAS_TELEGRAM:
+            try:
+                tg_application = create_telegram_app(tg_token)
+                if tg_application:
+                    await tg_application.initialize()
+                    await tg_application.start()
+                    logger.info("Telegram Application initialized on-demand via incoming webhook.")
+            except Exception as init_err:
+                logger.error(f"Failed on-demand Telegram app initialization: {init_err}")
+                tg_application = None
+
+    if not tg_application:
+        raise HTTPException(status_code=503, detail="Telegram bot is not initialized. Check TELEGRAM_BOT_TOKEN.")
 
     # Validate webhook secret token if configured
     if TELEGRAM_WEBHOOK_SECRET:
