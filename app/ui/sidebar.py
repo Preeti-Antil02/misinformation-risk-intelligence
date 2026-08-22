@@ -177,16 +177,26 @@ def render_sidebar():
 
         # 6. Telegram CTA (Replacing WhatsApp for Security)
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
+        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensVerifyBot").strip().lstrip("@")
+        bot_url = f"https://t.me/{bot_username}"
+        web_url = f"https://web.telegram.org/k/#@{bot_username}"
+
         html_tg = f"""
             <div class="wa-cta" style="border-radius:var(--radius-md); padding:16px; background:linear-gradient(135deg,#0088cc,#00aaff); color:#fff; position:relative; overflow:hidden;">
                 <div class="wa-cta-title" style="font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                     Verify on Telegram
                 </div>
-                <p style="font-size:11.5px; opacity:.9; margin:8px 0 14px; line-height:1.4;">Access high-security instant verification for claims and screenshots.</p>
-                <a href="https://t.me/RiskLensBot" target="_blank" style="text-decoration:none;">
-                    <div class="wa-cta-btn" style="background:#fff; color:#0088cc; font-size:12px; font-weight:800; padding:10px 16px; border-radius:10px; display:inline-flex; align-items:center; gap:6px; transition:transform 0.2s;">Launch Secure Bot →</div>
-                </a>
+                <p style="font-size:11.5px; opacity:.9; margin:8px 0 10px; line-height:1.4;">Instant neural verification for claims, forwarded messages, and screenshots.</p>
+                <div style="font-size:11px; opacity:.85; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">Handle: <b>@{bot_username}</b></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <a href="{bot_url}" target="_blank" style="text-decoration:none;">
+                        <div class="wa-cta-btn" style="background:#fff; color:#0088cc; font-size:11.5px; font-weight:800; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:5px; transition:transform 0.2s;">Open Bot →</div>
+                    </a>
+                    <a href="{web_url}" target="_blank" style="text-decoration:none;">
+                        <div class="wa-cta-btn" style="background:rgba(255,255,255,0.2); color:#fff; font-size:11.5px; font-weight:700; padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,0.4);">Web Client</div>
+                    </a>
+                </div>
             </div>
         """
         render_html(html_tg)
