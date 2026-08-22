@@ -433,6 +433,16 @@ def get_attention_highlights(text: str, model: Optional[Any] = None) -> Dict[str
     return get_explainer().get_attention_highlights(text, model=model)
 
 
+_explain_cache: Dict[str, Dict[str, Any]] = {}
+
 def explain_prediction(text: str) -> Dict[str, Any]:
-    """Generates complete multi-modal explanation dictionary."""
-    return get_explainer().explain_prediction(text)
+    """Generates complete multi-modal explanation dictionary with memory caching."""
+    cache_key = text.strip().lower()
+    if cache_key in _explain_cache:
+        return dict(_explain_cache[cache_key])
+
+    res = get_explainer().explain_prediction(text)
+    if len(_explain_cache) > 250:
+        _explain_cache.pop(next(iter(_explain_cache)))
+    _explain_cache[cache_key] = res
+    return res

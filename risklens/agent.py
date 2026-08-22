@@ -146,10 +146,10 @@ class VerificationAgent:
 
         clean_q = re.sub(r'[^\w\s]', ' ', claim).strip()
         clean_q = re.sub(r'\s+', ' ', clean_q)
+        # Priority single high-yield query first to minimize latency
         queries = [
-            clean_q,
             f"{clean_q} fact check",
-            f"is it true {clean_q}"
+            clean_q
         ]
 
         seen_urls = set()
@@ -158,7 +158,7 @@ class VerificationAgent:
                 continue
             results = []
             try:
-                # Priority 1: Serper
+                # Priority 1: Serper (Instant REST API)
                 if self.serper_api_key:
                     results = self._search_serper(q)
 
@@ -171,7 +171,9 @@ class VerificationAgent:
                         all_sources.append(r)
                         seen_urls.add(r["url"])
 
-                if len(all_sources) >= 6: break
+                # Early exit: as soon as we have enough grounding sources, return immediately
+                if len(all_sources) >= 3:
+                    break
             except Exception as e:
                 logger.warning(f"Search attempt failed for query '{truncate_text(q)}': {str(e)}")
                 continue
@@ -179,7 +181,7 @@ class VerificationAgent:
         if not all_sources:
             logger.warning(f"No web sources found for claim: {truncate_text(claim)}")
 
-        return {"sources": all_sources[:6]}
+        return {"sources": all_sources[:4]}
 
     # ========================================================================
     # NODE 3: VERDICT SYNTHESIZER (Hardened)
@@ -300,8 +302,9 @@ class VerificationAgent:
                 "error": str(e)
             }
 
-# Singleton
+# Singleton & In-Memory Response Cache
 _default_agent: Optional[VerificationAgent] = None
+_verify_cache: Dict[str, Dict[str, Any]] = {}
 
 def get_verification_agent() -> VerificationAgent:
     global _default_agent
@@ -310,4 +313,13 @@ def get_verification_agent() -> VerificationAgent:
     return _default_agent
 
 def verify(text: str, url: Optional[str] = None) -> Dict[str, Any]:
-    return get_verification_agent().verify(text, url=url)
+    """Top-level functional interface to run full multi-agent verification pipeline with high-speed memory caching."""
+    cache_key = f"{text.strip().lower()}::{url or ''}"
+    if cache_key in _verify_cache:
+        return dict(_verify_cache[cache_key])
+
+    res = get_verification_agent().verify(text, url=url)
+    if len(_verify_cache) > 250:
+        _verify_cache.pop(next(iter(_verify_cache)))
+    _verify_cache[cache_key] = res
+    return res
