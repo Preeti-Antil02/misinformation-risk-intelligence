@@ -181,8 +181,8 @@ def render_sidebar():
 
         # 6. Telegram CTA (Replacing WhatsApp for Security)
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensVerifyBot").strip().lstrip("@")
-        bot_url = f"https://t.me/{bot_username}"
+        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
+        app_deep_link = f"tg://resolve?domain={bot_username}"
         web_url = f"https://web.telegram.org/k/#@{bot_username}"
 
         html_tg = f"""
@@ -194,8 +194,8 @@ def render_sidebar():
                 <p style="font-size:11.5px; opacity:.9; margin:8px 0 10px; line-height:1.4;">Instant neural verification for claims, forwarded messages, and screenshots.</p>
                 <div style="font-size:11px; opacity:.85; font-family:'JetBrains Mono',monospace; margin-bottom:12px;">Handle: <b>@{bot_username}</b></div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <a href="{bot_url}" target="_blank" style="text-decoration:none;">
-                        <div class="wa-cta-btn" style="background:#fff; color:#0088cc; font-size:11.5px; font-weight:800; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:5px; transition:transform 0.2s;">Open Bot →</div>
+                    <a href="{app_deep_link}" target="_blank" style="text-decoration:none;">
+                        <div class="wa-cta-btn" style="background:#fff; color:#0088cc; font-size:11.5px; font-weight:800; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:5px; transition:transform 0.2s;">Open in App →</div>
                     </a>
                     <a href="{web_url}" target="_blank" style="text-decoration:none;">
                         <div class="wa-cta-btn" style="background:rgba(255,255,255,0.2); color:#fff; font-size:11.5px; font-weight:700; padding:8px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,0.4);">Web Client</div>

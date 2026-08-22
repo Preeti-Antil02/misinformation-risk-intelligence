@@ -261,8 +261,9 @@ def render_tab_verify():
     """Renders the state-of-the-art verification interface with full real backend wiring."""
 
     bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
-    bot_url = f"https://t.me/{bot_username}"
+    app_deep_link = f"tg://resolve?domain={bot_username}"
     web_url = f"https://web.telegram.org/k/#@{bot_username}"
+    t_me_url = f"https://t.me/{bot_username}"
 
     # 1. HERO HEADLINE & TELEGRAM DIRECT ACCESS CARD
     render_html(f"""
@@ -285,12 +286,13 @@ def render_tab_verify():
                 </div>
                 <p class="tg-hero-desc">Forward suspicious claims, articles, or viral screenshots directly to our bot for instant neural risk verification.</p>
                 <div class="tg-hero-buttons">
-                    <a href="{bot_url}" target="_blank" class="tg-btn-primary" id="tg_hero_open_bot">
-                        <span>Launch Telegram Bot</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                    <a href="{app_deep_link}" target="_blank" class="tg-btn-primary" id="tg_hero_open_app" title="Opens Telegram App directly">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        <span>Open in App</span>
                     </a>
-                    <a href="{web_url}" target="_blank" class="tg-btn-secondary" id="tg_hero_open_web">
-                        Web Client
+                    <a href="{web_url}" target="_blank" class="tg-btn-secondary" id="tg_hero_open_web" title="Opens in Web Telegram (Bypasses ISP DNS Blocks)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        <span>Web Client</span>
                     </a>
                 </div>
             </div>
