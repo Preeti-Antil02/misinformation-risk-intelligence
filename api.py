@@ -78,6 +78,7 @@ from risklens.monitoring import (
     get_operational_summary,
     check_model_drift,
     check_webhook_health,
+    get_telegram_diagnostic,
     send_alert,
     init_sentry
 )
@@ -408,13 +409,11 @@ def health():
         "active": scheduler_active
     }
 
-    # 5. Telegram Webhook / Polling Status
+    # 5. Telegram Webhook / Polling Status & Live Telemetry
     tg_mode = os.getenv("TELEGRAM_MODE", "polling").lower()
-    tg_configured = bool(os.getenv("TELEGRAM_BOT_TOKEN"))
     checks["telegram"] = {
-        "status": "ok" if tg_configured else "unconfigured",
         "mode": tg_mode,
-        "configured": tg_configured
+        **get_telegram_diagnostic()
     }
 
     # 6. Secret Configuration Presence
@@ -459,8 +458,14 @@ def health():
 
 
 # -------------------------------------------------------
-# Telegram Webhook Endpoint
+# Telegram Diagnostic & Webhook Endpoints
 # -------------------------------------------------------
+@app.get("/api/telegram-diag", tags=["Monitoring"])
+async def telegram_diagnostics():
+    """Returns real-time Telegram Bot API diagnostic information."""
+    return get_telegram_diagnostic()
+
+
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     """

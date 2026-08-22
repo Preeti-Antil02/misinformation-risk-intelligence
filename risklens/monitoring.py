@@ -531,11 +531,52 @@ def check_model_drift_and_alert(
         return {"checked": False, "error": str(e)}
 
 
+def get_telegram_diagnostic() -> Dict[str, Any]:
+    """Queries Telegram getMe and getWebhookInfo to get complete live diagnostics."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip() or TELEGRAM_BOT_TOKEN
+    if not token:
+        return {"configured": False, "status": "unconfigured", "message": "TELEGRAM_BOT_TOKEN not set"}
+    
+    result = {"configured": True, "token_present": True}
+    # 1. getMe
+    try:
+        r_me = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=6)
+        if r_me.status_code == 200 and r_me.json().get("ok"):
+            me = r_me.json().get("result", {})
+            result["bot_info"] = {
+                "id": me.get("id"),
+                "username": me.get("username"),
+                "first_name": me.get("first_name"),
+                "can_join_groups": me.get("can_join_groups")
+            }
+        else:
+            result["bot_info"] = {"error": f"HTTP {r_me.status_code}: {r_me.text}"}
+    except Exception as e:
+        result["bot_info"] = {"error": str(e)}
+
+    # 2. getWebhookInfo
+    try:
+        r_wh = requests.get(f"https://api.telegram.org/bot{token}/getWebhookInfo", timeout=6)
+        if r_wh.status_code == 200 and r_wh.json().get("ok"):
+            wh = r_wh.json().get("result", {})
+            result["webhook_info"] = {
+                "url": wh.get("url"),
+                "has_custom_certificate": wh.get("has_custom_certificate"),
+                "pending_update_count": wh.get("pending_update_count"),
+                "last_error_date": wh.get("last_error_date"),
+                "last_error_message": wh.get("last_error_message")
+            }
+        else:
+            result["webhook_info"] = {"error": f"HTTP {r_wh.status_code}: {r_wh.text}"}
+    except Exception as e:
+        result["webhook_info"] = {"error": str(e)}
+
+    return result
+
+
 check_model_drift = check_model_drift_and_alert
 check_webhook_health = check_telegram_webhook_health
 init_sentry = init_error_tracking
-
-
 
 # Initialize databases and Sentry on import
 init_telemetry_db()

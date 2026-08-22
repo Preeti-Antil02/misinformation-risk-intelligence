@@ -49,7 +49,7 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
         echo "🤖 [3/4] Telegram Bot will run in webhook mode via FastAPI (no standalone worker)."
     else
         echo "🤖 [3/4] Launching Telegram Bot in polling mode..."
-        python risklens/telegram_bot.py &
+        PYTHONUNBUFFERED=1 python risklens/telegram_bot.py &
     fi
 else
     echo "ℹ️ [3/4] TELEGRAM_BOT_TOKEN not configured. Telegram bot worker skipped."

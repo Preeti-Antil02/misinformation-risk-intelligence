@@ -70,7 +70,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 
 # Rate Limit Database
-USAGE_DB_PATH = BASE_DIR / "usage.db"
+DATABASES_DIR = Path(os.getenv("DATABASE_DIR", str(BASE_DIR / "databases")))
+DATABASES_DIR.mkdir(parents=True, exist_ok=True)
+USAGE_DB_PATH = DATABASES_DIR / "usage.db"
 MAX_MESSAGE_LENGTH = 4000
 MAX_DAILY_REQUESTS = 20
 
@@ -446,10 +448,11 @@ if __name__ == '__main__':
         logger.critical("python-telegram-bot is not installed.")
         sys.exit(1)
 
-    if not TELEGRAM_TOKEN:
-        logger.critical("TELEGRAM_BOT_TOKEN is missing in .env")
+    tok = os.getenv("TELEGRAM_BOT_TOKEN", "").strip() or TELEGRAM_TOKEN
+    if not tok:
+        logger.critical("TELEGRAM_BOT_TOKEN is missing in environment.")
         sys.exit(1)
 
-    app = create_telegram_app(TELEGRAM_TOKEN)
+    app = create_telegram_app(tok)
     logger.info("RiskLens Telegram Bot service starting in secure polling mode with monitoring active...")
-    app.run_polling(drop_pending_updates=True, allowed_updates=["message", "callback_query"])
+    app.run_polling(drop_pending_updates=False)
