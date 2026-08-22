@@ -46,7 +46,7 @@ def main():
     
     # 1. UNIFIED SINGLE TOP ROW: BRAND (LEFT) + THEME TOGGLE (RIGHT)
     # The centered pill navigation tabs are seamlessly aligned onto this exact same row on desktop
-    brand_col1, brand_col2 = st.columns([8, 2])
+    brand_col1, brand_col2 = st.columns([7, 3])
     
     with brand_col1:
         render_html(f"""
@@ -62,14 +62,29 @@ def main():
         """)
 
     with brand_col2:
-        st.markdown("<div class='theme-toggle-wrap' style='text-align: right; padding-top: 4px;'>", unsafe_allow_html=True)
+        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
+        bot_url = f"https://t.me/{bot_username}"
         is_dark = st.session_state.get("theme", "dark") == "dark"
         t_label = "Dark Mode" if is_dark else "Light Mode"
-        t_btn = st.button(t_label, key="top_theme_toggle", help="Toggle visual color mode")
-        if t_btn:
-            st.session_state.theme = "light" if is_dark else "dark"
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+
+        c_tg, c_thm = st.columns([1.1, 1.2])
+        with c_tg:
+            render_html(f"""
+                <div style="text-align: right; padding-top: 6px;">
+                    <a href="{bot_url}" target="_blank" class="tg-header-badge" id="header_tg_link" title="Launch Telegram Bot">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                        <span>Bot</span>
+                        <span class="tg-pulse" style="width:5px; height:5px; margin-left: 2px;"></span>
+                    </a>
+                </div>
+            """)
+        with c_thm:
+            st.markdown("<div class='theme-toggle-wrap' style='text-align: right; padding-top: 4px;'>", unsafe_allow_html=True)
+            t_btn = st.button(t_label, key="top_theme_toggle", help="Toggle visual color mode")
+            if t_btn:
+                st.session_state.theme = "light" if is_dark else "dark"
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # 2. PILL NAVIGATION TABS (Verify / Analytics / Pipeline / History / Settings)
     tab1, tab2, tab3, tab4, tab5 = st.tabs([

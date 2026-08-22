@@ -260,11 +260,40 @@ def render_processing_panel(step_index: int, step_details: Dict[str, Any]):
 def render_tab_verify():
     """Renders the state-of-the-art verification interface with full real backend wiring."""
 
-    # 1. HERO HEADLINE & SUBHEAD
-    render_html("""
-        <div class="hero-text">
-            <div class="headline">Don't let a forward become a fact.</div>
-            <p class="subhead">Multilingual AI verification for text, links, and screenshots — powered by a multi-model ensemble and live fact-checking, in seconds.</p>
+    bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
+    bot_url = f"https://t.me/{bot_username}"
+    web_url = f"https://web.telegram.org/k/#@{bot_username}"
+
+    # 1. HERO HEADLINE & TELEGRAM DIRECT ACCESS CARD
+    render_html(f"""
+        <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 20px; flex-wrap: wrap; margin-bottom: 24px;">
+            <div class="hero-text" style="flex: 1; min-width: 290px; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center;">
+                <div class="headline">Don't let a forward become a fact.</div>
+                <p class="subhead" style="margin-bottom: 0;">Multilingual AI verification for text, links, and screenshots — powered by a multi-model ensemble and live fact-checking, in seconds.</p>
+            </div>
+            <div class="tg-hero-card">
+                <div class="tg-hero-header">
+                    <div class="tg-icon-circle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="tg-hero-title">Telegram Intelligence <span class="tg-online-badge"><span class="tg-pulse"></span>Live</span></div>
+                        <div class="tg-hero-handle">@{bot_username}</div>
+                    </div>
+                </div>
+                <p class="tg-hero-desc">Forward suspicious claims, articles, or viral screenshots directly to our bot for instant neural risk verification.</p>
+                <div class="tg-hero-buttons">
+                    <a href="{bot_url}" target="_blank" class="tg-btn-primary" id="tg_hero_open_bot">
+                        <span>Launch Telegram Bot</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                    </a>
+                    <a href="{web_url}" target="_blank" class="tg-btn-secondary" id="tg_hero_open_web">
+                        Web Client
+                    </a>
+                </div>
+            </div>
         </div>
     """)
 

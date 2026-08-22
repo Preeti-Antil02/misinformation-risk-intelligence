@@ -1118,6 +1118,157 @@ def inject_theme():
         }}
     }}
 
+    /* =========================================================================
+       Telegram Direct Access Hero & Header Components
+       ========================================================================= */
+    .tg-hero-card {
+        background: linear-gradient(135deg, rgba(0, 136, 204, 0.12), rgba(0, 170, 255, 0.04)) !important;
+        border: 1px solid rgba(0, 136, 204, 0.35) !important;
+        border-radius: 16px !important;
+        padding: 16px 20px !important;
+        box-shadow: 0 4px 20px rgba(0, 136, 204, 0.12) !important;
+        backdrop-filter: blur(16px);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        max-width: 380px;
+        min-width: 280px;
+    }
+    .tg-hero-card:hover {
+        border-color: rgba(0, 170, 255, 0.6) !important;
+        box-shadow: 0 8px 28px rgba(0, 136, 204, 0.22) !important;
+        transform: translateY(-2px);
+    }
+    .tg-hero-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+    .tg-icon-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0088cc, #00b4d8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 2px 10px rgba(0, 136, 204, 0.4);
+        flex-shrink: 0;
+    }
+    .tg-hero-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+    }
+    .tg-hero-handle {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #00aaff;
+        font-weight: 600;
+    }
+    .tg-online-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10px;
+        font-weight: 700;
+        color: #2FCC93;
+        background: rgba(47, 204, 147, 0.15);
+        padding: 2px 7px;
+        border-radius: 12px;
+        border: 1px solid rgba(47, 204, 147, 0.3);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-left: 8px;
+    }
+    .tg-pulse {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #2FCC93;
+        box-shadow: 0 0 6px #2FCC93;
+        animation: pulseAnimation 1.8s infinite;
+    }
+    .tg-hero-desc {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        line-height: 1.45;
+        margin: 0 0 12px 0;
+    }
+    .tg-hero-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .tg-btn-primary {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        background: linear-gradient(135deg, #0088cc, #00aaff) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 11.5px !important;
+        padding: 7px 14px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 8px rgba(0, 136, 204, 0.35) !important;
+    }
+    .tg-btn-primary:hover {
+        box-shadow: 0 4px 14px rgba(0, 136, 204, 0.5) !important;
+        transform: translateY(-1px) !important;
+        color: #ffffff !important;
+    }
+    .tg-btn-secondary {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        color: var(--text-muted) !important;
+        font-weight: 600 !important;
+        font-size: 11.5px !important;
+        padding: 7px 12px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        border: 1px solid var(--border) !important;
+        transition: all 0.2s ease !important;
+    }
+    .tg-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: var(--text) !important;
+        border-color: rgba(0, 136, 204, 0.4) !important;
+    }
+    .tg-header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, rgba(0, 136, 204, 0.16), rgba(0, 170, 255, 0.08));
+        border: 1px solid rgba(0, 136, 204, 0.35);
+        color: #00aaff !important;
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        margin-right: 8px;
+    }
+    .tg-header-badge:hover {
+        background: linear-gradient(135deg, rgba(0, 136, 204, 0.28), rgba(0, 170, 255, 0.18));
+        border-color: rgba(0, 170, 255, 0.6);
+        color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 10px rgba(0, 136, 204, 0.25);
+    }
+
     /* Hide Streamlit Cruft */
     header[data-testid="stHeader"], #MainMenu, footer {{
         display: none !important;
