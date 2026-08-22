@@ -559,16 +559,39 @@ async def telegram_webhook(request: Request):
                 try:
                     from risklens.agent import verify
                     from risklens.telegram_bot import format_telegram_report
+                    from risklens.feedback import record_prediction
+                    from risklens.utils import truncate_text
                     
                     report = verify(text)
                     formatted = format_telegram_report(report)
                     reply_text = formatted.get("raw_text", f"Risk Assessment: {report.get('risk_level', 'Unknown')}")
                     
-                    logger.info(f"Verification complete ({report.get('risk_level')}). Returning direct webhook response.")
+                    # Record prediction to obtain real prediction_id
+                    pid = record_prediction(
+                        text=truncate_text(text, 500),
+                        language=report.get("language", "en"),
+                        probability=report.get("risk_score", 0.5),
+                        risk_level=report.get("risk_level", "Moderate"),
+                        model_used="Ensemble v2.1",
+                        source="telegram",
+                        user_id=user_id
+                    )
+
+                    keyboard = [
+                        [
+                            {"text": "✅ Correct", "callback_data": f"fb_1_{pid}"},
+                            {"text": "❌ Wrong", "callback_data": f"fb_0_{pid}"}
+                        ]
+                    ]
+
+                    logger.info(f"Verification complete (PID {pid}, {report.get('risk_level')}). Returning direct webhook response with inline keyboard.")
                     return JSONResponse(content={
                         "method": "sendMessage",
                         "chat_id": chat_id,
-                        "text": reply_text
+                        "text": reply_text,
+                        "reply_markup": {
+                            "inline_keyboard": keyboard
+                        }
                     })
                 except Exception as verify_err:
                     logger.error(f"Neural verification error in webhook: {verify_err}", exc_info=True)
@@ -583,6 +606,43 @@ async def telegram_webhook(request: Request):
         if callback:
             cb_id = callback.get("id")
             cb_data = callback.get("data", "")
+            cb_user = callback.get("from", {})
+            cb_user_id = str(cb_user.get("id", "anonymous"))
+            cb_msg = callback.get("message", {})
+            cb_chat_id = cb_msg.get("chat", {}).get("id")
+            cb_msg_id = cb_msg.get("message_id")
+            original_text = cb_msg.get("text", "")
+
+            fb_parts = cb_data.split("_")
+            if len(fb_parts) >= 3 and fb_parts[0] == "fb":
+                fb_type = fb_parts[1]
+                try:
+                    pid = int(fb_parts[2])
+                except ValueError:
+                    pid = 0
+
+                fb_val = "✅ Correct" if fb_type == "1" else "❌ Wrong"
+                correct_label = "real" if fb_type == "1" else "misinformation"
+
+                res = record_feedback(
+                    prediction_id=pid,
+                    user_feedback=fb_val,
+                    correct_label=correct_label,
+                    user_id=cb_user_id
+                )
+
+                status_note = "✅ Feedback recorded. Thank you for strengthening RiskLens intelligence!" if res.get("success") else "ℹ️ Feedback already recorded or expired."
+                new_text = original_text + f"\n\n{status_note}"
+
+                if cb_chat_id and cb_msg_id:
+                    return JSONResponse(content={
+                        "method": "editMessageText",
+                        "chat_id": cb_chat_id,
+                        "message_id": cb_msg_id,
+                        "text": new_text,
+                        "reply_markup": {"inline_keyboard": []}
+                    })
+
             return JSONResponse(content={
                 "method": "answerCallbackQuery",
                 "callback_query_id": cb_id,

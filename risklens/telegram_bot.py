@@ -174,7 +174,7 @@ def format_telegram_report(data: dict) -> dict:
     """
     risk_level = data.get("risk_level", "Moderate")
     prob = data.get("risk_score", data.get("probability", 0.5))
-    confidence_pct = int(prob * 100)
+    prob_pct = int(prob * 100)
     claim = data.get("claim", "")
     verdict = data.get("verdict", "")
 
@@ -191,14 +191,15 @@ def format_telegram_report(data: dict) -> dict:
         f"{safe_claim}\n\n"
         f"📝 Verdict:\n"
         f"{safe_verdict}\n\n"
-        f"📊 Confidence: {confidence_pct}%\n"
+        f"📊 Misinformation probability: {prob_pct}%\n"
         f"─────────────────────\n"
         f"Was this intelligence accurate?"
     )
 
     return {
         "risk_level": risk_level,
-        "confidence_pct": confidence_pct,
+        "prob_pct": prob_pct,
+        "confidence_pct": prob_pct,
         "claim": claim,
         "verdict": verdict,
         "raw_text": report_text
@@ -333,8 +334,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = [
             [
-                InlineKeyboardButton("👍 Correct", callback_data=f"fb_1_{pid}"),
-                InlineKeyboardButton("👎 Wrong", callback_data=f"fb_0_{pid}")
+                InlineKeyboardButton("✅ Correct", callback_data=f"fb_1_{pid}"),
+                InlineKeyboardButton("❌ Wrong", callback_data=f"fb_0_{pid}")
             ]
         ]
 
@@ -373,20 +374,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle feedback button clicks with ownership verification and replay guards."""
+    """Handle feedback button clicks with ownership verification, graceful fallback, and button removal."""
     query = update.callback_query
     if not query: return
 
     try:
-        await query.answer()
+        await query.answer(text="Processing feedback...")
         data = query.data.split("_")
-        if len(data) < 3: return
+        if len(data) < 3 or data[0] != "fb": return
 
         fb_type = data[1]
-        pid = int(data[2])
+        try:
+            pid = int(data[2])
+        except ValueError:
+            pid = 0
+
         user_id = str(update.effective_user.id) if update.effective_user else "anonymous"
 
-        fb_val = "👍 Correct" if fb_type == "1" else "👎 Wrong"
+        fb_val = "✅ Correct" if fb_type == "1" else "❌ Wrong"
         correct_label = "real" if fb_type == "1" else "misinformation"
 
         # Record feedback with user ownership verification
@@ -397,11 +402,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_id=user_id
         )
 
+        original_text = query.message.text or ""
+
         if res.get("success"):
-            new_text = query.message.text + "\n\nFeedback recorded. Thank you!"
-            await query.edit_message_text(text=new_text)
+            new_text = original_text + "\n\n✅ Feedback recorded. Thank you for strengthening RiskLens intelligence!"
         else:
-            await query.edit_message_text(text=query.message.text + "\n\nUnable to record feedback.")
+            new_text = original_text + "\n\nℹ️ Feedback already recorded or expired."
+
+        # Edit message text and remove inline keyboard to prevent replay
+        await query.edit_message_text(text=new_text, reply_markup=None)
 
     except Exception as e:
         logger.error(f"Error in Telegram callback handler: {str(e)}", exc_info=True)

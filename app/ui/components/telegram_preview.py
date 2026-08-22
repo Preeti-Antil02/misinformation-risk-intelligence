@@ -2,7 +2,7 @@
 app/ui/components/telegram_preview.py
 =====================================
 Pixel-perfect Telegram channel phone frame mockup for RiskLens v2.1.0.
-Fully synchronized with risklens.telegram_bot formatting.
+Fully synchronized with risklens.telegram_bot formatting and labeling.
 """
 
 from typing import Dict, Any
@@ -19,7 +19,7 @@ def render_telegram_preview(data: Dict[str, Any]):
     # Use unified formatter to ensure 100% synchronization with real bot output
     formatted = format_telegram_report(data)
     risk_level = formatted["risk_level"]
-    prob_pct = formatted["confidence_pct"]
+    prob_pct = formatted["prob_pct"]
     claim = formatted["claim"]
     verdict = formatted["verdict"]
 
@@ -70,14 +70,14 @@ def render_telegram_preview(data: Dict[str, Any]):
                         </div>
                         <div class="tg-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M8 17V9m5 8V5m5 12v-5"/></svg>
-                            <span><b>Confidence:</b> {prob_pct}%</span>
+                            <span><b>Misinformation probability:</b> {prob_pct}%</span>
                         </div>
                         <div style="font-size: 11px; color: #9BA7B4; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
-                            Was this assessment accurate?
+                            Was this intelligence accurate?
                         </div>
                         <div class="tg-kb">
-                            <div class="tg-kb-btn">Correct</div>
-                            <div class="tg-kb-btn">Wrong</div>
+                            <div class="tg-kb-btn">✅ Correct</div>
+                            <div class="tg-kb-btn">❌ Wrong</div>
                         </div>
                     </div>
                 </div>

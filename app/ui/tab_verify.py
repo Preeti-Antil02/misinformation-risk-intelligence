@@ -399,7 +399,7 @@ def render_tab_verify():
                     "model_title": "Executing Multi-Agent Verification on Extracted Text",
                     "model_sub": "Cross-checking claim against live authoritative sources",
                     "synth_title": "Synthesizing verdict",
-                    "synth_sub": "Synthesizing multimodal confidence"
+                    "synth_sub": "Synthesizing multimodal probability"
                 })
 
             data = verify_image(temp_path)
@@ -414,7 +414,7 @@ def render_tab_verify():
                     "model_title": "Multi-agent search complete",
                     "model_sub": "Authority citations verified",
                     "synth_title": "Synthesizing verdict",
-                    "synth_sub": "Generating explainability attribution & confidence calibration"
+                    "synth_sub": "Generating explainability attribution & probability calibration"
                 })
 
         # PATH B: URL DEEP READING & DOMAIN CREDIBILITY
@@ -513,7 +513,7 @@ def render_tab_verify():
                         "model_title": "Autonomous search agent complete",
                         "model_sub": f"Found {len(agent_res.get('sources', []))} grounding evidence links",
                         "synth_title": "Synthesizing verdict",
-                        "synth_sub": "Calibrating final confidence score"
+                        "synth_sub": "Calibrating final risk probability"
                     })
 
                 data = {
@@ -534,7 +534,7 @@ def render_tab_verify():
                         "model_title": "Executing Indic Semantic Claim Analysis",
                         "model_sub": "Extracting regional entities & linguistic manipulation signals",
                         "synth_title": "Synthesizing verdict",
-                        "synth_sub": "Synthesizing regional confidence"
+                        "synth_sub": "Synthesizing regional risk probability"
                     })
 
                 pred_multi = predict_multilingual(user_text)
