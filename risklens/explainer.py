@@ -406,6 +406,7 @@ class RiskExplainer:
             "probability": round(prob, 4),
             "risk_level": risk_level,
             "shap_top_features": shap_top_features,
+            "top_features": shap_top_features,
             "attention_highlights": attention_highlights,
             "why_summary": why_summary
         }
