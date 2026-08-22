@@ -32,6 +32,7 @@ st.set_page_config(
 from app.ui.utils import render_html
 from app.ui.theme import inject_theme
 from app.ui.sidebar import render_sidebar
+from app.ui.components.telegram_popover import render_telegram_popover
 from app.ui.tab_verify import render_tab_verify
 from app.ui.tab_analytics import render_tab_analytics
 from app.ui.tab_pipeline import render_tab_pipeline
@@ -62,22 +63,12 @@ def main():
         """)
 
     with brand_col2:
-        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
-        web_url = f"https://web.telegram.org/k/#@{bot_username}"
         is_dark = st.session_state.get("theme", "dark") == "dark"
         t_label = "Dark Mode" if is_dark else "Light Mode"
 
         c_tg, c_thm = st.columns([1.1, 1.2])
         with c_tg:
-            render_html(f"""
-                <div style="text-align: right; padding-top: 6px;">
-                    <a href="{web_url}" target="_blank" class="tg-header-badge" id="header_tg_link" title="Open RiskLens Telegram Bot">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                        <span>Bot</span>
-                        <span class="tg-pulse" style="width:5px; height:5px; margin-left: 2px;"></span>
-                    </a>
-                </div>
-            """)
+            render_telegram_popover()
         with c_thm:
             st.markdown("<div class='theme-toggle-wrap' style='text-align: right; padding-top: 4px;'>", unsafe_allow_html=True)
             t_btn = st.button(t_label, key="top_theme_toggle", help="Toggle visual color mode")

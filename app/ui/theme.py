@@ -1269,6 +1269,173 @@ def inject_theme():
         box-shadow: 0 2px 10px rgba(0, 136, 204, 0.25);
     }}
 
+    /* =========================================================================
+       Reusable Viewport-Aware Popover & Dropdown System
+       ========================================================================= */
+    .tg-header-badge-btn {{
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        background: linear-gradient(135deg, rgba(0, 136, 204, 0.16), rgba(0, 170, 255, 0.08)) !important;
+        border: 1px solid rgba(0, 136, 204, 0.35) !important;
+        color: #00aaff !important;
+        border-radius: 20px !important;
+        padding: 6px 14px !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        user-select: none !important;
+        transition: all 0.2s ease !important;
+        margin-right: 8px !important;
+        outline: none !important;
+        height: auto !important;
+        min-height: auto !important;
+        box-shadow: none !important;
+    }}
+    .tg-header-badge-btn:hover,
+    .tg-header-badge-btn[aria-expanded="true"] {{
+        background: linear-gradient(135deg, rgba(0, 136, 204, 0.28), rgba(0, 170, 255, 0.18)) !important;
+        border-color: rgba(0, 170, 255, 0.6) !important;
+        color: #ffffff !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 12px rgba(0, 136, 204, 0.3) !important;
+    }}
+
+    .rl-popover {{
+        position: fixed !important;
+        z-index: 999999 !important;
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 136, 204, 0.25) !important;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+        padding: 18px 20px !important;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(6px) scale(0.98);
+        transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+        pointer-events: none;
+        box-sizing: border-box;
+        max-width: calc(100vw - 24px);
+    }}
+    .rl-popover.open {{
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateY(0) scale(1) !important;
+        pointer-events: auto !important;
+    }}
+    .rl-popover-header {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+    }}
+    .rl-popover-avatar {{
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0088cc, #00b4d8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        box-shadow: 0 2px 10px rgba(0, 136, 204, 0.4);
+        flex-shrink: 0;
+    }}
+    .rl-popover-close {{
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }}
+    .rl-popover-close:hover {{
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+    }}
+    .rl-popover-handle-box {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 10px;
+        margin: 10px 0 14px 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11.5px;
+        color: #00aaff;
+    }}
+    .rl-popover-copy-btn {{
+        background: rgba(0, 136, 204, 0.15);
+        border: 1px solid rgba(0, 136, 204, 0.3);
+        color: #00aaff;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 10.5px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }}
+    .rl-popover-copy-btn:hover {{
+        background: rgba(0, 136, 204, 0.3);
+        color: #ffffff;
+    }}
+    .rl-popover-actions {{
+        display: flex;
+        gap: 8px;
+        flex-direction: column;
+    }}
+    .rl-popover-btn-app {{
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        background: linear-gradient(135deg, #0088cc, #00aaff) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 12.5px !important;
+        padding: 9px 16px !important;
+        border-radius: 9px !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 10px rgba(0, 136, 204, 0.35) !important;
+    }}
+    .rl-popover-btn-app:hover {{
+        box-shadow: 0 4px 16px rgba(0, 136, 204, 0.5) !important;
+        transform: translateY(-1px) !important;
+        color: #ffffff !important;
+    }}
+    .rl-popover-btn-web {{
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        color: var(--text) !important;
+        font-weight: 600 !important;
+        font-size: 12px !important;
+        padding: 8px 14px !important;
+        border-radius: 9px !important;
+        text-decoration: none !important;
+        border: 1px solid var(--border) !important;
+        transition: all 0.2s ease !important;
+    }}
+    .rl-popover-btn-web:hover {{
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-color: rgba(0, 136, 204, 0.4) !important;
+    }}
+
     /* Hide Streamlit Cruft */
     header[data-testid="stHeader"], #MainMenu, footer {{
         display: none !important;
