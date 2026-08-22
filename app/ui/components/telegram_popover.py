@@ -3,7 +3,8 @@ app/ui/components/telegram_popover.py
 ======================================
 Enterprise Viewport-Aware Popover & Dropdown Engine for RiskLens.
 - Replaces previous large hero Telegram card with collapsed topbar 'Bot' pill popover.
-- Uses HTML5 details/summary for 100% bulletproof client-side toggle without iframe script isolation issues.
+- Uses HTML5 details/summary + full-viewport transparent backdrop for instant click-outside dismissal.
+- Uses actual registered handle: @RiskLensVerifyBot.
 - Smart responsive CSS: right-anchored on desktop, left-anchored on wrapped tablet, centered sheet on mobile (<520px).
 """
 
@@ -13,15 +14,15 @@ from app.ui.utils import render_html
 
 def render_telegram_popover():
     """
-    Renders the Topbar Telegram Popover trigger and dynamic viewport-aware floating card.
+    Renders the Topbar Telegram Popover trigger, full-screen dismissal backdrop, and floating card.
     """
-    bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
+    bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensVerifyBot").strip().lstrip("@")
     app_deep_link = f"tg://resolve?domain={bot_username}"
     web_url = f"https://web.telegram.org/k/#@{bot_username}"
 
     html = f"""
     <div class="bot-pill-wrap">
-        <details class="bot-pill-details">
+        <details class="bot-pill-details" id="botDetails">
             <summary class="bot-pill" id="botPillBtn" title="RiskLens Telegram Intelligence Bot">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; flex-shrink:0;">
                     <path d="m22 2-7 20-4-9-9-4Z"/>
@@ -29,6 +30,10 @@ def render_telegram_popover():
                 <span>Bot</span>
                 <span class="dot"></span>
             </summary>
+
+            <!-- Full-viewport transparent backdrop for 1-click dismissal anywhere on screen -->
+            <div class="bot-backdrop" onclick="document.getElementById('botDetails').removeAttribute('open')"></div>
+
             <div class="bot-popover" id="botPopover" role="dialog" aria-label="RiskLens Telegram Bot">
                 <div class="bp-head">
                     <div class="bp-icon">

@@ -1327,6 +1327,16 @@ def inject_theme():
         animation: pulseAnimation 2s infinite;
     }}
 
+    .bot-backdrop {{
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 99998 !important;
+        background: transparent !important;
+        cursor: default !important;
+    }}
+
     .bot-popover {{
         position: absolute !important;
         top: calc(100% + 10px) !important;

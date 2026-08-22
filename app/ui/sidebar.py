@@ -181,7 +181,7 @@ def render_sidebar():
 
         # 6. Telegram CTA (Replacing WhatsApp for Security)
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensIntelligenceBot").strip().lstrip("@")
+        bot_username = os.getenv("TELEGRAM_BOT_USERNAME", "RiskLensVerifyBot").strip().lstrip("@")
         app_deep_link = f"tg://resolve?domain={bot_username}"
         web_url = f"https://web.telegram.org/k/#@{bot_username}"
 
